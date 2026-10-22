@@ -1,0 +1,81 @@
+name: Verify Chrome Web Store credentials
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check all secrets are present
+        env:
+          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+          CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in CWS_EXTENSION_ID CWS_PUBLISHER_ID CWS_CLIENT_ID CWS_CLIENT_SECRET CWS_REFRESH_TOKEN; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing repository secret: $name"
+              missing=1
+            else
+              echo "present: $name"
+            fi
+          done
+          exit $missing
+
+      - name: Exchange refresh token for an access token
+        id: token
+        env:
+          CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+        run: |
+          set -euo pipefail
+          resp=$(curl -sS -X POST https://oauth2.googleapis.com/token \
+            -d "client_id=${CLIENT_ID}" \
+            -d "client_secret=${CLIENT_SECRET}" \
+            -d "refresh_token=${REFRESH_TOKEN}" \
+            -d "grant_type=refresh_token")
+
+          if [ "$(echo "$resp" | jq -r '.error // "none"')" != "none" ]; then
+            echo "::error::Token exchange failed: $(echo "$resp" | jq -r '.error_description // .error')"
+            exit 1
+          fi
+
+          access=$(echo "$resp" | jq -r '.access_token')
+          echo "::add-mask::$access"
+          echo "Access token obtained (scope: $(echo "$resp" | jq -r '.scope // "unknown"'))"
+          echo "access_token=$access" >> "$GITHUB_OUTPUT"
+
+      - name: Query the store item
+        env:
+          ACCESS_TOKEN: ${{ steps.token.outputs.access_token }}
+          PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+          ITEM_ID: ${{ secrets.CWS_EXTENSION_ID }}
+        run: |
+          set -uo pipefail
+          v2_base="https://chromewebstore.googleapis.com/v2/publishers/${PUBLISHER_ID}/items/${ITEM_ID}"
+
+          v2_code=$(curl -sS -o /tmp/v2.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${ACCESS_TOKEN}" "${v2_base}:fetchStatus")
+          echo "v2 fetchStatus (validates publisher ID) -> HTTP ${v2_code}"
+          head -c 700 /tmp/v2.json; echo; echo
+
+          v1_code=$(curl -sS -o /tmp/v1.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+            "https://www.googleapis.com/chromewebstore/v1.1/items/${ITEM_ID}?projection=DRAFT")
+          echo "v1.1 items.get (validates item ID + token) -> HTTP ${v1_code}"
+          head -c 700 /tmp/v1.json; echo; echo
+
+          if [ "$v2_code" != "200" ] && [ "$v1_code" != "200" ]; then
+            echo "::error::Both endpoints failed - credentials are not usable"
+            exit 1
+          fi
+          echo "At least one endpoint accepted the credentials."
