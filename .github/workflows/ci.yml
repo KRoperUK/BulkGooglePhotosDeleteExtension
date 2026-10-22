@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate manifest version
+        run: |
+          node -e 'const v = require("./manifest.json").version; if (!/^\d+(\.\d+){0,3}$/.test(v)) { console.error("Invalid Chrome extension version: " + v); process.exit(1); } console.log("version ok: " + v);'
+
+      - name: Syntax check content script
+        run: node --check content.js
+
+      - name: Icon assets present
+        run: |
+          for f in icons/icon16.png icons/icon32.png icons/icon48.png icons/icon128.png; do
+            test -f "$f" || { echo "missing $f"; exit 1; }
+          done
+          echo "icons ok"
