@@ -28,7 +28,7 @@ A panel appears bottom-right.
 
 | Option | Meaning |
 |---|---|
-| Batch size | `0` = select everything in view per pass (fastest). A number = click up to that many tiles, scrolling the grid as it goes to keep loading the next window. |
+| Batch size | Defaults to `50`. `0` = select everything in view per pass (fastest). A number = click up to that many tiles, scrolling the grid as it goes to keep loading the next window. |
 | Max this run | Hard stop after N deletions. `0` = unlimited. |
 | Delay | Milliseconds between individual tile clicks when batch size > 0. Defaults to `5`, which is comfortably fast enough for Google's UI. |
 | Dry run | Select and report without deleting. |

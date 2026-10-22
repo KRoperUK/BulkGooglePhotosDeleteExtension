@@ -621,8 +621,8 @@
       <div class="panel">
         <div class="head"><b>Bulk Delete Google Photos</b></div>
         <div class="body">
-          <label class="row">Batch size <input type="number" id="batchSize" value="0" min="0" step="10"></label>
-          <span class="hint">0 = select everything in view (fastest)</span>
+          <label class="row">Batch size <input type="number" id="batchSize" value="50" min="0" step="10"></label>
+          <span class="hint">0 = select everything in view, else this many per pass</span>
           <label class="row">Max this run <input type="number" id="maxTotal" value="0" min="0" step="100"></label>
           <span class="hint">0 = unlimited</span>
           <label class="row">Delay (ms) <input type="number" id="delay" value="5" min="1" step="5"></label>
