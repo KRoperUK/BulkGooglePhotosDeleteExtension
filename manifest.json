@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Bulk Delete Google Photos",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Select and delete your own Google Photos in batches. Dry run, stop control, no limits, no network requests.",
   "icons": {
     "16": "icons/icon16.png",
