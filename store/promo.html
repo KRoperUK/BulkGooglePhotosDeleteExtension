@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { background: radial-gradient(circle at 30% 20%, #23406e 0%, #101a2e 62%, #0a1220 100%);
+    display: flex; align-items: center; justify-content: center; }
+  .bg { position: absolute; inset: 0; display: grid; gap: 1.2%;
+    grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(4, 1fr);
+    padding: 3%; opacity: .10; }
+  .bg i { border-radius: 6px; background: #8ab4f8; display: block; }
+  .bg i:nth-child(3n) { background: #80cbc4; }
+  .bg i:nth-child(5n) { background: #ffcc80; }
+  .bg i:nth-child(7n) { background: #c5cae9; }
+  .stage { position: relative; display: flex; align-items: center; gap: 4%; }
+  .icon { width: 42%; max-width: 190px; filter: drop-shadow(0 10px 24px rgba(0,0,0,.45)); }
+  .txt { color: #e8eaed; }
+  .txt b { display: block; font-size: clamp(18px, 5.2vw, 34px); font-weight: 700; letter-spacing: -.4px; }
+  .txt span { display: block; color: #9fb4d4; font-size: clamp(10px, 2.2vw, 15px); margin-top: .35em; }
+</style>
+</head>
+<body>
+  <div class="bg" id="bg"></div>
+  <div class="stage">
+    <img class="icon" src="../icons/icon.svg" alt="">
+    <div class="txt">
+      <b>Bulk Delete</b>
+      <span>Google Photos &middot; no limits</span>
+    </div>
+  </div>
+<script>
+  for (let i = 0; i < 32; i++) document.getElementById('bg').appendChild(document.createElement('i'));
+</script>
+</body>
+</html>

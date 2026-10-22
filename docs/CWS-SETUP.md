@@ -9,6 +9,8 @@ Everything below is one-time. After it's done, releases are fully automatic.
 3. Note the **extension ID** from the item's URL:
    `https://chrome.google.com/webstore/devconsole/<publisher-id>/<extension-id>/edit`
 
+   This item's ID is `laeijompklaebgbmhoehbefjmfcaohnf`.
+
 The API can only update an item that already exists, so this manual first upload is unavoidable.
 
 ## 2. Create OAuth credentials
