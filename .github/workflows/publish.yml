@@ -89,3 +89,46 @@ jobs:
           client-secret: ${{ secrets.CWS_CLIENT_SECRET }}
           refresh-token: ${{ secrets.CWS_REFRESH_TOKEN }}
           publish: true
+
+      # The upload action exits 0 even when the store ignores the publish call,
+      # so confirm independently that the store now reports this version.
+      - name: Confirm the store accepted the package
+        env:
+          EXT_ID: ${{ secrets.CWS_EXTENSION_ID }}
+          CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+        run: |
+          set -euo pipefail
+          version=$(node -p 'require("./manifest.json").version')
+
+          resp=$(curl -sS -X POST https://oauth2.googleapis.com/token \
+            -d "client_id=${CLIENT_ID}" \
+            -d "client_secret=${CLIENT_SECRET}" \
+            -d "refresh_token=${REFRESH_TOKEN}" \
+            -d "grant_type=refresh_token")
+
+          token=$(echo "$resp" | jq -r '.access_token // empty')
+          if [ -z "$token" ]; then
+            echo "::error::Token exchange failed: $(echo "$resp" | jq -r '.error_description // .error')"
+            exit 1
+          fi
+          echo "::add-mask::$token"
+
+          item=""
+          for attempt in 1 2 3 4 5 6; do
+            item=$(curl -sS -H "Authorization: Bearer ${token}" \
+              "https://www.googleapis.com/chromewebstore/v1.1/items/${EXT_ID}?projection=DRAFT")
+            crx=$(echo "$item" | jq -r '.crxVersion // empty')
+            echo "attempt ${attempt}: store reports crxVersion=${crx:-none}, expected ${version}"
+            if [ "$crx" = "$version" ]; then
+              echo "$item" | jq 'del(.publicKey)'
+              echo "Store accepted version ${version}."
+              exit 0
+            fi
+            sleep 10
+          done
+
+          echo "::error::Store does not report version ${version} after upload - the publish was silently ignored."
+          echo "$item" | jq 'del(.publicKey)' || echo "$item"
+          exit 1
