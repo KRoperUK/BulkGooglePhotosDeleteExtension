@@ -3,6 +3,18 @@ name: Publish to Chrome Web Store
 on:
   release:
     types: [published]
+  workflow_call:
+    inputs:
+      tag:
+        description: Tag to publish
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to publish, e.g. v1.1.0
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -11,9 +23,24 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve tag
+        id: tag
+        run: |
+          set -euo pipefail
+          tag="${{ inputs.tag }}"
+          if [ -z "$tag" ]; then
+            tag="${{ github.event.release.tag_name }}"
+          fi
+          if [ -z "$tag" ]; then
+            echo "::error::No tag to publish"
+            exit 1
+          fi
+          echo "Publishing tag: $tag"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ steps.tag.outputs.tag }}
 
       - name: Check credentials are configured
         env:
@@ -33,14 +60,15 @@ jobs:
           done
           exit $missing
 
-      - name: Verify release tag matches manifest version
+      - name: Verify tag matches manifest version
         run: |
           set -euo pipefail
-          tag="${GITHUB_REF_NAME#v}"
           version=$(node -p 'require("./manifest.json").version')
-          echo "tag=$tag manifest=$version"
-          if [ "$tag" != "$version" ]; then
-            echo "::error::Release tag ($tag) does not match manifest.json version ($version)"
+          # Tags may be "v1.1.0" or "<package-name>-v1.1.0"; extract the trailing semver.
+          tag_version=$(echo "${{ steps.tag.outputs.tag }}" | sed -E 's/^.*v([0-9]+(\.[0-9]+){0,3})$/\1/')
+          echo "tag=${{ steps.tag.outputs.tag }} -> $tag_version, manifest=$version"
+          if [ "$tag_version" != "$version" ]; then
+            echo "::error::Release tag ($tag_version) does not match manifest.json version ($version)"
             exit 1
           fi
 
