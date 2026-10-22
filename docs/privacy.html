@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — Bulk Delete Google Photos</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f6f8fa; color: #1f2328;
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 48px 22px 80px; }
+  h1 { font-size: 28px; line-height: 1.25; margin: 0 0 6px; letter-spacing: -.3px; }
+  .eff { color: #59636e; font-size: 14px; margin: 0 0 32px; }
+  h2 { font-size: 18px; margin: 34px 0 10px; letter-spacing: -.2px; }
+  p, li { color: #1f2328; }
+  ul { padding-left: 22px; }
+  li { margin: 6px 0; }
+  .card { background: #fff; border: 1px solid #d1d9e0; border-radius: 10px; padding: 18px 20px; margin: 0 0 8px; }
+  .card p:last-child { margin-bottom: 0; }
+  .tag { display: inline-block; background: #dafbe1; color: #116329; border: 1px solid #aceebb;
+    border-radius: 999px; padding: 2px 10px; font-size: 13px; font-weight: 600; margin-bottom: 14px; }
+  code { background: #eff2f5; border-radius: 4px; padding: 1px 5px; font-size: 14px; }
+  a { color: #0969da; }
+  footer { margin-top: 44px; padding-top: 18px; border-top: 1px solid #d1d9e0; color: #59636e; font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <span class="tag">No data collected</span>
+  <h1>Privacy Policy</h1>
+  <p class="eff">Bulk Delete Google Photos &middot; Effective 23 October 2026</p>
+
+  <div class="card">
+    <p><strong>Short version:</strong> this extension collects nothing, transmits nothing, and stores nothing. It has no server. Everything it does happens inside your browser, on the Google Photos page you already have open.</p>
+  </div>
+
+  <h2>1. What the extension does</h2>
+  <p>Bulk Delete Google Photos is a browser extension that automates the Google Photos web interface so that photos can be selected and deleted in bulk. It adds a control panel to <code>photos.google.com</code> and, when you start a run, clicks the same interface elements you would click yourself.</p>
+
+  <h2>2. Data we collect</h2>
+  <p>None. The extension does not collect, request, or record any personal information. Specifically, it does not collect:</p>
+  <ul>
+    <li>your name, email address, or account identifiers;</li>
+    <li>your photos, videos, or any file content;</li>
+    <li>your browsing history or activity on any website;</li>
+    <li>device identifiers, location, or usage analytics;</li>
+    <li>crash reports or diagnostic data.</li>
+  </ul>
+
+  <h2>3. Data the extension reads locally</h2>
+  <p>To function, the extension reads the structure of the Google Photos page in your browser — the same page content your browser already displays — to locate selection checkboxes, the Delete button, and the confirmation dialog. This processing happens entirely in memory in your browser. It is never copied out of the page, and it never leaves your device. The extension does not open, decode, or inspect the contents of your photos.</p>
+
+  <h2>4. Network activity</h2>
+  <p>The extension makes no network requests of any kind. It contains no <code>fetch</code>, <code>XMLHttpRequest</code>, <code>WebSocket</code> or <code>sendBeacon</code> calls, no remote script loading, and no remote code execution. All logic ships inside the installed package. There is no backend service, no API, and no analytics endpoint for it to talk to.</p>
+
+  <h2>5. Permissions</h2>
+  <p>The extension's manifest requests <strong>no permissions at all</strong>. It declares a single content script limited to <code>https://photos.google.com/*</code>. It cannot read or modify any other website, and it holds no access to your file system, tabs, history, or bookmarks.</p>
+
+  <h2>6. Storage</h2>
+  <p>No data is stored. The extension does not use <code>localStorage</code>, <code>IndexedDB</code>, cookies, or any browser storage API. Settings you type into the panel exist only until the page is closed.</p>
+
+  <h2>7. Third parties</h2>
+  <p>There are no third parties. Nothing is sold, rented, shared, or transferred to anyone, and no third-party SDKs, trackers, or advertising services are included.</p>
+
+  <h2>8. Deletions and Google's services</h2>
+  <p>When you ask the extension to delete photos, it performs those actions through Google Photos in your browser while you are signed in. The deletions are carried out by Google's own service, under your Google account, and are governed by Google's Privacy Policy and Terms of Service. Deleted items are moved to the Google Photos Bin, where Google retains them for a period before permanent deletion. This extension has no access to that data beyond the visible interface.</p>
+
+  <h2>9. Children</h2>
+  <p>The extension is not directed at children and collects no data from anyone, including children.</p>
+
+  <h2>10. Changes to this policy</h2>
+  <p>If this policy changes, the updated version will be published at this URL with a new effective date. Because the extension collects no data, any future change that introduced data collection would require an explicit new permission request, which you would see and could refuse at install or update time.</p>
+
+  <h2>11. Contact</h2>
+  <p>Questions about this policy can be raised at
+    <a href="https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/issues">github.com/KRoperUK/BulkGooglePhotosDeleteExtension/issues</a>.</p>
+
+  <h2>12. Trademark notice</h2>
+  <p>This is an unofficial extension. It is not affiliated with, endorsed by, or sponsored by Google LLC. "Google Photos" is a trademark of Google LLC, used only to describe the service this extension works with.</p>
+
+  <footer>
+    <p>This policy applies to the Bulk Delete Google Photos Chrome extension. Last updated 23 October 2026.</p>
+  </footer>
+</main>
+</body>
+</html>

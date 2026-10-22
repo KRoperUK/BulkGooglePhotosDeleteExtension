@@ -107,22 +107,16 @@ The extension has exactly one function: automating the Google Photos web interfa
 
 ## Test instructions
 
-Reviewers must be able to exercise this without destroying a real photo library. Use this text:
+Reviewers must be able to exercise this without destroying a real photo library. This field is capped at 500 characters; the text below is 457.
 
 ```
-This extension automates the Google Photos web UI. Please test with Dry run enabled so nothing is deleted.
-
-1. Install the extension.
-2. Open https://photos.google.com and sign in.
-3. A dark control panel appears in the bottom-right corner of the page.
-4. Leave "Dry run (select only)" ticked. It is ticked by default.
-5. Click Start.
-6. Watch the panel: it selects photos, reports how many it selected, then deselects them. Nothing is deleted in this mode.
-7. Click Diagnose to print the selector discovery details into the panel's log.
-
-Optional read-only verification: the manifest requests no permissions and the source contains no network calls (fetch, XMLHttpRequest, WebSocket, sendBeacon). Search content.js to confirm.
-
-Warning: unticking Dry run and typing DELETE starts real deletions. Those go to the Bin and are recoverable for 30 days, but reviewers should not run this against a personal library.
+Automates the Google Photos web UI. Please test without deleting:
+1. Install, open photos.google.com while signed in.
+2. A dark panel appears bottom-right.
+3. Leave "Dry run (select only)" ticked (default).
+4. Click Start: it selects photos, reports the count, then deselects. Nothing is deleted.
+5. Click Diagnose to print selector details in the log.
+Unticking Dry run and typing DELETE performs real deletions (to Bin). No permissions, no network calls.
 ```
 
 ## After the first upload
