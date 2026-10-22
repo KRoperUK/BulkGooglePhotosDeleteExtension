@@ -5,6 +5,7 @@
     ".": {
       "release-type": "simple",
       "package-name": "bulk-delete-google-photos",
+      "include-component-in-tag": false,
       "extra-files": [
         {
           "type": "json",
