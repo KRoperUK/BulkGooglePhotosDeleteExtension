@@ -89,6 +89,18 @@ https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/issues
 
 ## Privacy tab
 
+**Privacy policy URL**
+
+```
+https://www.kroper.uk/BulkGooglePhotosDeleteExtension/privacy.html
+```
+
+If the dashboard rejects it, the `github.io` equivalent also resolves (it 301-redirects to the custom domain):
+
+```
+https://kroperuk.github.io/BulkGooglePhotosDeleteExtension/privacy.html
+```
+
 **Single purpose**
 
 ```
