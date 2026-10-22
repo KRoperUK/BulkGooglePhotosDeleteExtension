@@ -15,16 +15,34 @@ The API can only update an item that already exists, so this manual first upload
 
 ## 2. Create OAuth credentials
 
-1. In <https://console.cloud.google.com/apis/credentials>, create an **OAuth client ID** of type **Desktop app**.
-2. Copy the client ID and client secret.
-3. Get a refresh token with the `chromewebstore` scope, using the
-   [OAuth 2.0 Playground](https://developers.google.com/oauthplayground):
-   - Gear icon → tick **Use your own OAuth credentials** → paste your client ID and secret
-   - In **Input your own scopes**, enter: `https://www.googleapis.com/auth/chromewebstore`
-   - **Authorize APIs** → sign in with the account that owns the store item
-   - **Exchange authorization code for tokens** → copy the **refresh token**
+1. Enable the **Chrome Web Store API** for your project at
+   <https://console.cloud.google.com/apis/library/chromewebstore.googleapis.com>.
+2. In <https://console.cloud.google.com/apis/credentials>, create an **OAuth client ID**.
+   Either type works — the script below handles both.
+3. Copy the client ID and client secret.
 
-The refresh token is long-lived; treat it like a password. Do not paste it into an issue, PR, or commit.
+### Getting the refresh token
+
+Use the bundled script:
+
+```bash
+python3 tools/get-refresh-token.py
+```
+
+It opens a browser, catches the loopback redirect on `127.0.0.1:8765`, exchanges the
+code and prints the refresh token.
+
+**Do not use the OAuth 2.0 Playground with a "Desktop app" client.** It fails with
+`Error 400: redirect_uri_mismatch`, because the Playground's redirect URI
+(`https://developers.google.com/oauthplayground`) is not a loopback address and
+Desktop clients do not allow arbitrary redirect URIs. If you would rather use the
+Playground, create a **Web application** client instead and add
+`https://developers.google.com/oauthplayground` under **Authorized redirect URIs**.
+For the script with a Web application client, add `http://127.0.0.1:8765/callback`
+instead.
+
+Sign in with the account that owns the store item. The refresh token is long-lived;
+treat it like a password. Do not paste it into an issue, PR, or commit.
 
 ## 3. Add repository secrets
 
