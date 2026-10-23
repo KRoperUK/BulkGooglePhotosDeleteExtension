@@ -89,39 +89,60 @@ async function ping(id) {
 const looksLikePhotos = (url) =>
   typeof url === 'string' && /^https:\/\/photos\.google\.com\//.test(url);
 
-async function connect() {
+function markConnected(res) {
+  setConnection(res.onTrash ? 'Connected — this is the Bin page' : 'Connected to Google Photos', 'ok');
+  if (res.running) setRunning(true);
+}
+
+// The queried active tab and the tab the toolbar button was used on can differ,
+// so try both rather than trusting one.
+async function candidates() {
+  const list = [];
   const tab = await activeTab();
-  if (!tab || tab.id === undefined) {
+  if (tab && tab.id !== undefined) list.push({ id: tab.id, url: tab.url });
+
+  try {
+    const r = await chrome.runtime.sendMessage({ type: 'bdgp:tab' });
+    if (r && r.tabId !== undefined && !list.some((c) => c.id === r.tabId)) {
+      list.push({ id: r.tabId, url: undefined });
+    }
+  } catch (e) {
+    // background may be asleep; the queried tab is enough
+  }
+
+  return list;
+}
+
+async function connect() {
+  const list = await candidates();
+  if (!list.length) {
     tabId = null;
     setConnection('No active tab', 'warn');
     return;
   }
 
-  tabId = tab.id;
-
-  let res = await ping(tabId);
-
-  if (!res) {
-    // tab.url is undefined without the "tabs" permission, so a missing url is
-    // not evidence that this is the wrong tab. Only skip when we positively
-    // know it is somewhere else.
-    if (tab.url && !looksLikePhotos(tab.url)) {
-      setConnection('Open photos.google.com on this tab, then click the extension icon', 'warn');
+  for (const c of list) {
+    const res = await ping(c.id);
+    if (res) {
+      tabId = c.id;
+      markConnected(res);
       return;
-    }
-
-    try {
-      await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] });
-      res = await ping(tabId);
-    } catch (e) {
-      res = null;
     }
   }
 
-  if (res) {
-    setConnection(res.onTrash ? 'Connected — this is the Bin page' : 'Connected to Google Photos', 'ok');
-    if (res.running) setRunning(true);
-    return;
+  for (const c of list) {
+    if (c.url && !looksLikePhotos(c.url)) continue;
+    try {
+      await chrome.scripting.executeScript({ target: { tabId: c.id }, files: ['content.js'] });
+    } catch (e) {
+      continue;
+    }
+    const res = await ping(c.id);
+    if (res) {
+      tabId = c.id;
+      markConnected(res);
+      return;
+    }
   }
 
   setConnection('Click the extension icon on the Photos tab', 'warn');
