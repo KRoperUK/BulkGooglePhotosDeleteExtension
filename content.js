@@ -141,11 +141,11 @@
     return EMPTY_RE.test(text);
   }
 
-  function selectionCount() {
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  function countInText(root, budget) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     let node;
     let seen = 0;
-    while ((node = walker.nextNode()) && seen < 6000) {
+    while ((node = walker.nextNode()) && seen < budget) {
       seen++;
       const text = node.nodeValue;
       if (!text || text.length > 80) continue;
@@ -155,6 +155,28 @@
         if (Number.isFinite(n)) return n;
       }
     }
+    return null;
+  }
+
+  function selectionCount() {
+    // Prefer the selection toolbar/banner, where the "N selected" counter
+    // actually lives. Scoping the scan there is far cheaper than walking the
+    // whole document and avoids false matches on unrelated UI text that
+    // happens to read like "<number> selected".
+    for (const region of document.querySelectorAll('[role="toolbar"], [role="banner"], header')) {
+      if (!visible(region)) continue;
+      const n = countInText(region, 400);
+      if (n !== null) return n;
+    }
+
+    // Fall back to a bounded whole-document walk for layouts where the counter
+    // is not inside a recognised toolbar region.
+    const docCount = countInText(document.body, 6000);
+    if (docCount !== null) return docCount;
+
+    // Last resort: count checked tiles. This under-reports when the selection
+    // spans off-screen tiles the virtualised grid has not rendered, so it is
+    // only reached when no textual counter was found at all.
     return findTileCheckboxes().filter((el) => el.getAttribute('aria-checked') === 'true').length;
   }
 
