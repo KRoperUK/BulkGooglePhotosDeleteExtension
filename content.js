@@ -228,67 +228,6 @@
     batches: 0
   };
 
-  function log(message) {
-    const line = `[${new Date().toLocaleTimeString()}] ${message}`;
-    if (ui.logEl) {
-      const div = document.createElement('div');
-      div.textContent = line;
-      ui.logEl.prepend(div);
-      while (ui.logEl.childElementCount > 200) ui.logEl.lastElementChild.remove();
-    }
-    console.log('[bdgp]', message);
-  }
-
-  function setStatus(text) {
-    if (ui.statusEl) ui.statusEl.textContent = text;
-  }
-
-  function showModal() {
-    ui.startedAt = Date.now();
-    ui.modalCount.textContent = '0';
-    ui.modalBatch.textContent = 'Batch 0';
-    ui.modalElapsed.textContent = '0s';
-    ui.modalBar.classList.add('indeterminate');
-    ui.modalBar.style.width = '';
-    ui.overlay.classList.add('show');
-    if (ui.timer) clearInterval(ui.timer);
-    ui.timer = setInterval(() => {
-      const s = Math.round((Date.now() - ui.startedAt) / 1000);
-      ui.modalElapsed.textContent = s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
-    }, 500);
-  }
-
-  function hideModal() {
-    ui.overlay.classList.remove('show');
-    if (ui.timer) {
-      clearInterval(ui.timer);
-      ui.timer = null;
-    }
-  }
-
-  function updateModal({ phase, deleted, batch, percent }) {
-    if (!ui.overlay) return;
-    if (phase !== undefined) ui.modalPhase.textContent = phase;
-    if (deleted !== undefined) ui.modalCount.textContent = Number(deleted).toLocaleString();
-    if (batch !== undefined) ui.modalBatch.textContent = `Batch ${batch}`;
-    if (percent === null) {
-      ui.modalBar.classList.add('indeterminate');
-      ui.modalBar.style.width = '';
-    } else if (percent !== undefined) {
-      ui.modalBar.classList.remove('indeterminate');
-      ui.modalBar.style.width = `${Math.max(0, Math.min(100, percent))}%`;
-    }
-  }
-
-  function readOptions() {
-    return {
-      batchSize: Math.max(0, parseInt(ui.batchSize.value, 10) || 0),
-      maxTotal: Math.max(0, parseInt(ui.maxTotal.value, 10) || 0),
-      delay: Math.max(1, parseInt(ui.delay.value, 10) || 5),
-      dryRun: ui.dryRun.checked
-    };
-  }
-
   function findSelectAllControl() {
     const els = [...document.querySelectorAll('[role="checkbox"], button, [role="button"]')];
     return els.find((el) => {
@@ -582,15 +521,19 @@
     return true;
   }
 
-  async function run() {
-    const opts = readOptions();
+  async function run(opts) {
+    opts = {
+      batchSize: Math.max(0, Number(opts && opts.batchSize) || 0),
+      maxTotal: Math.max(0, Number(opts && opts.maxTotal) || 0),
+      delay: Math.max(1, Number(opts && opts.delay) || 5),
+      dryRun: !!(opts && opts.dryRun)
+    };
+
     state.running = true;
     state.stop = false;
     state.deleted = 0;
     state.batches = 0;
 
-    ui.startBtn.disabled = true;
-    ui.stopBtn.disabled = false;
     showModal();
     updateModal({ phase: 'Starting…', deleted: 0, batch: 0, percent: null });
     log(`Started. batch=${opts.batchSize || 'all'} max=${opts.maxTotal || 'unlimited'} dryRun=${opts.dryRun}`);
@@ -684,8 +627,6 @@
       updateModal({ phase: `Error: ${err.message}`, percent: null });
     } finally {
       state.running = false;
-      ui.startBtn.disabled = false;
-      ui.stopBtn.disabled = true;
 
       // An aborted run (Stop, missing Delete button, failed confirmation) can
       // leave a selection behind, and the next run would stack on top of it.
@@ -706,226 +647,108 @@
     }
   }
 
-  // ---------- UI ----------
+  // ---------- reporting ----------
 
-  const ui = {};
+  function emit(payload) {
+    try {
+      const p = chrome.runtime.sendMessage({ type: 'bdgp:event', ...payload });
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+    } catch (e) {
+      // Extension context was reloaded; nothing to report to.
+    }
+  }
 
-  function buildUI() {
-    const host = document.createElement('div');
-    host.id = 'bdgp-host';
-    host.style.cssText = 'position:fixed;z-index:2147483647;right:16px;bottom:16px;';
-    const root = host.attachShadow({ mode: 'open' });
+  function log(message) {
+    const line = `[${new Date().toLocaleTimeString()}] ${message}`;
+    console.log('[bdgp]', message);
+    emit({ log: line });
+  }
 
-    root.innerHTML = `
-      <style>
-        .panel {
-          font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-          width: 300px; background: #1f2023; color: #e8eaed; border-radius: 12px;
-          box-shadow: 0 8px 28px rgba(0,0,0,.45); border: 1px solid #3c4043; overflow: hidden;
+  function setStatus(text) {
+    emit({ status: text });
+  }
+
+  function updateModal({ phase, deleted, batch, percent }) {
+    emit({ progress: { phase, deleted, batch, percent } });
+  }
+
+  function showModal() {
+    emit({ modal: true });
+  }
+
+  function hideModal() {
+    emit({ modal: false });
+  }
+
+  // ---------- diagnostics ----------
+
+  function diagnose() {
+    const tiles = findTileCheckboxes();
+    const control = findSelectAllControl();
+    const deleteBtn = findDeleteButton();
+    const buttons = [...document.querySelectorAll('button, [role="button"]')].filter(visible).slice(0, 30);
+    const container = tiles.length ? scrollContainer(tiles[0]) : null;
+
+    return [
+      `Tiles in DOM: ${tiles.length}`,
+      `Checked: ${tiles.filter((t) => t.getAttribute('aria-checked') === 'true').length}`,
+      `Tile label sample: ${dedupe(tiles.slice(0, 4).map((t) => label(t).slice(0, 30))).join(' | ') || '(none)'}`,
+      `Select-all control: ${control ? label(control).slice(0, 50) : 'not found'}`,
+      `Delete control: ${deleteBtn ? label(deleteBtn).slice(0, 40) : 'not found'}`,
+      `Visible buttons: ${dedupe(buttons.map((b) => label(b).slice(0, 28) || '(unlabelled)')).slice(0, 18).join(' | ')}`,
+      `Scroll container: ${container ? `${container.tagName} h=${container.clientHeight} sh=${container.scrollHeight}` : 'none'}`,
+      `Selected count: ${selectionCount()}`
+    ];
+  }
+
+  // ---------- commands from the side panel ----------
+
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (!msg || typeof msg.type !== 'string') return;
+
+    switch (msg.type) {
+      case 'bdgp:ping':
+        sendResponse({
+          ok: true,
+          running: state.running,
+          onTrash: window.location.pathname.startsWith('/trash')
+        });
+        break;
+
+      case 'bdgp:start':
+        if (state.running) {
+          sendResponse({ ok: false, error: 'A run is already in progress.' });
+          break;
         }
-        .head { display:flex; align-items:center; justify-content:space-between;
-                padding:10px 12px; background:#2a2b2f; cursor:default; }
-        .head b { font-size:13px; letter-spacing:.2px; }
-        .body { padding:12px; display:grid; gap:9px; }
-        label.row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-        input[type=number] { width:74px; background:#121316; color:#e8eaed; border:1px solid #3c4043;
-                             border-radius:6px; padding:4px 6px; font:inherit; }
-        .hint { color:#9aa0a6; font-size:11px; }
-        .buttons { display:flex; gap:8px; margin-top:2px; }
-        button { flex:1; border:0; border-radius:7px; padding:8px 10px; font:inherit; font-weight:600;
-                 cursor:pointer; }
-        #start { background:#8ab4f8; color:#202124; }
-        #start:disabled { background:#3c4043; color:#80868b; cursor:not-allowed; }
-        #stop { background:#5f6368; color:#e8eaed; }
-        #stop:disabled { opacity:.45; cursor:not-allowed; }
-        #status { color:#8ab4f8; font-size:12px; min-height:16px; }
-        .log { max-height:130px; overflow:auto; background:#121316; border-radius:6px; padding:6px 8px;
-               font:11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color:#bdc1c6; }
-        .log div { white-space:pre-wrap; word-break:break-word; }
-        .warn { color:#f28b82; font-size:11px; }
+        if (window.location.pathname.startsWith('/trash')) {
+          sendResponse({ ok: false, error: 'Refusing to run on the Bin page — deletions there are permanent.' });
+          break;
+        }
+        run(msg.options).catch((err) => log(`Error: ${err.message}`));
+        sendResponse({ ok: true });
+        break;
 
-        .bubble { flex:0 0 auto; padding:0; width:52px; height:52px; border-radius:50%; border:0;
-                  background:#1f2023; box-shadow:0 6px 20px rgba(0,0,0,.45); cursor:pointer;
-                  display:grid; place-items:center; }
-        .bubble:hover { background:#2a2b2f; }
-        .bubble img, .bubble svg { width:34px; height:34px; display:block; }
-        .bubble[hidden], .panel[hidden] { display:none; }
-        .icon-btn { flex:0 0 auto; padding:0; width:24px; height:24px; border:0; border-radius:4px;
-                    background:transparent; color:#9aa0a6; font-size:16px; line-height:1; cursor:pointer; }
-        .icon-btn:hover { background:#3c4043; color:#e8eaed; }
+      case 'bdgp:stop':
+        state.stop = true;
+        updateModal({ phase: 'Stopping…' });
+        log('Stop requested.');
+        sendResponse({ ok: true });
+        break;
 
-        .overlay { position:fixed; inset:0; display:none; align-items:center; justify-content:center;
-                   background:rgba(0,0,0,.55); backdrop-filter:blur(2px); }
-        .overlay.show { display:flex; }
-        .card { font:13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-                width:380px; background:#1f2023; color:#e8eaed; border:1px solid #3c4043;
-                border-radius:14px; padding:20px; box-shadow:0 16px 48px rgba(0,0,0,.6); }
-        .card h3 { margin:0 0 2px; font-size:15px; font-weight:600; }
-        .phase { color:#9aa0a6; font-size:12px; min-height:16px; margin-bottom:14px; }
-        .big { font-size:34px; font-weight:700; color:#8ab4f8; line-height:1.1; }
-        .big small { font-size:13px; font-weight:500; color:#9aa0a6; margin-left:6px; }
-        .bar-wrap { height:8px; background:#2a2b2f; border-radius:999px; overflow:hidden; margin:14px 0 8px; }
-        .bar { height:100%; width:0; background:#8ab4f8; border-radius:999px; transition:width .2s linear; }
-        .bar.indeterminate { width:35%; animation:slide 1.1s ease-in-out infinite; }
-        @keyframes slide { 0% { transform:translateX(-110%); } 100% { transform:translateX(310%); } }
-        .meta { display:flex; justify-content:space-between; color:#9aa0a6; font-size:11px; }
-        .card .buttons { margin-top:16px; }
-        #modalStop { background:#5f6368; color:#e8eaed; }
-      </style>
-      <button class="bubble" id="bubble" title="Bulk Delete Google Photos" hidden>
-        <svg viewBox="0 0 128 128" width="34" height="34" aria-hidden="true">
-          <rect x="16" y="22" width="76" height="60" rx="10" fill="#2f4f96" opacity=".45" transform="rotate(-7 54 52)"/>
-          <rect x="24" y="32" width="76" height="60" rx="10" fill="#8ab4f8"/>
-          <circle cx="43" cy="50" r="6" fill="#ffffff" opacity=".95"/>
-          <path d="M28 86 L52 60 L68 76 L78 66 L96 86 Z" fill="#ffffff" opacity=".95"/>
-          <circle cx="95" cy="89" r="19" fill="#ef5350"/>
-          <rect x="86" y="85.5" width="18" height="7" rx="3.5" fill="#ffffff"/>
-        </svg>
-      </button>
+      case 'bdgp:diagnose':
+        sendResponse({ ok: true, report: diagnose() });
+        break;
 
-      <div class="panel" id="panel">
-        <div class="head">
-          <b>Bulk Delete Google Photos</b>
-          <button class="icon-btn" id="minimize" title="Minimise">&minus;</button>
-        </div>
-        <div class="body">
-          <label class="row">Batch size <input type="number" id="batchSize" value="50" min="0" step="10"></label>
-          <span class="hint">0 = select everything in view, else this many per pass</span>
-          <label class="row">Max this run <input type="number" id="maxTotal" value="0" min="0" step="100"></label>
-          <span class="hint">0 = unlimited</span>
-          <label class="row">Delay (ms) <input type="number" id="delay" value="5" min="1" step="5"></label>
-          <label class="row"><span>Dry run (select only)</span><input type="checkbox" id="dryRun" checked></label>
-          <label class="row"><span>Confirm before deleting</span><input type="checkbox" id="confirm" checked></label>
-          <div class="buttons">
-            <button id="start">Start</button>
-            <button id="stop" disabled>Stop</button>
-          </div>
-          <div class="buttons">
-            <button id="diagnose" style="background:#3c4043;color:#e8eaed">Diagnose</button>
-          </div>
-          <div id="status">Idle</div>
-          <div class="log"></div>
-          <div class="warn">Deletes go to Bin, not permanently. Empty the Bin to free storage.</div>
-        </div>
-      </div>
-
-      <div class="overlay" id="overlay">
-        <div class="card">
-          <h3>Deleting Google Photos</h3>
-          <div class="phase" id="modalPhase">Starting…</div>
-          <div class="big"><span id="modalCount">0</span><small id="modalUnit">deleted</small></div>
-          <div class="bar-wrap"><div class="bar indeterminate" id="modalBar"></div></div>
-          <div class="meta">
-            <span id="modalBatch">Batch 0</span>
-            <span id="modalElapsed">0s</span>
-          </div>
-          <div class="buttons">
-            <button id="modalStop">Stop</button>
-          </div>
-        </div>
-      </div>
-    `;
-
-    ui.batchSize = root.querySelector('#batchSize');
-    ui.maxTotal = root.querySelector('#maxTotal');
-    ui.delay = root.querySelector('#delay');
-    ui.dryRun = root.querySelector('#dryRun');
-    ui.confirm = root.querySelector('#confirm');
-    ui.startBtn = root.querySelector('#start');
-    ui.stopBtn = root.querySelector('#stop');
-    ui.statusEl = root.querySelector('#status');
-    ui.logEl = root.querySelector('.log');
-    ui.overlay = root.querySelector('#overlay');
-    ui.modalPhase = root.querySelector('#modalPhase');
-    ui.modalCount = root.querySelector('#modalCount');
-    ui.modalBar = root.querySelector('#modalBar');
-    ui.modalBatch = root.querySelector('#modalBatch');
-    ui.modalElapsed = root.querySelector('#modalElapsed');
-    ui.modalStop = root.querySelector('#modalStop');
-    ui.bubble = root.querySelector('#bubble');
-    ui.panelEl = root.querySelector('#panel');
-    ui.minimizeBtn = root.querySelector('#minimize');
-
-    ui.bubble.addEventListener('click', () => {
-      ui.panelEl.hidden = false;
-      ui.bubble.hidden = true;
-    });
-    ui.minimizeBtn.addEventListener('click', () => {
-      ui.panelEl.hidden = true;
-      ui.bubble.hidden = false;
-    });
-
-    // Clicking the toolbar button again reopens the panel.
-    window.__bdgpOpen = () => {
-      ui.panelEl.hidden = false;
-      ui.bubble.hidden = true;
-    };
-
-    ui.startBtn.addEventListener('click', () => {
-      if (window.location.pathname.startsWith('/trash')) {
-        alert('Refusing to run on the Bin page — deletions there are permanent.');
+      default:
         return;
-      }
-      if (!ui.dryRun.checked && ui.confirm.checked) {
-        const typed = prompt('This deletes photos from your library. Type DELETE to confirm:');
-        if (typed !== 'DELETE') {
-          log('Confirmation not given. Aborted.');
-          return;
-        }
-      }
-      if (!ui.dryRun.checked && !ui.confirm.checked) {
-        log('Confirmation disabled — starting immediately.');
-      }
-      run();
-    });
-
-    const requestStop = () => {
-      state.stop = true;
-      setStatus('Stopping…');
-      updateModal({ phase: 'Stopping…' });
-      log('Stop requested.');
-    };
-
-    ui.stopBtn.addEventListener('click', requestStop);
-    ui.modalStop.addEventListener('click', requestStop);
-
-    ui.diagnoseBtn = root.querySelector('#diagnose');
-    ui.diagnoseBtn.addEventListener('click', () => {
-      const tiles = findTileCheckboxes();
-      const control = findSelectAllControl();
-      const buttons = [...document.querySelectorAll('button, [role="button"]')].filter(visible).slice(0, 30);
-      log(`Tiles in DOM: ${tiles.length}`);
-      log(`Checked: ${tiles.filter((t) => t.getAttribute('aria-checked') === 'true').length}`);
-      log(`Tile label sample: ${dedupe(tiles.slice(0, 4).map((t) => label(t).slice(0, 30))).join(' | ') || '(none)'}`);
-      log(`Select-all control: ${control ? label(control).slice(0, 50) : 'not found'}`);
-      log(`Visible buttons: ${dedupe(buttons.map((b) => label(b).slice(0, 28) || '(unlabelled)')).slice(0, 18).join(' | ')}`);
-      log(`Scroll container: ${(() => {
-        const c = tiles.length ? scrollContainer(tiles[0]) : null;
-        return c ? `${c.tagName}.${(c.className || '').toString().slice(0, 40)} h=${c.clientHeight} sh=${c.scrollHeight}` : 'none';
-      })()}`);
-      log(`Selected count: ${selectionCount()}`);
-    });
-
-    document.documentElement.appendChild(host);
-    ui.host = host;
-  }
-
-  function init() {
-    if (!document.body) {
-      setTimeout(init, 300);
-      return;
     }
-    buildUI();
 
-    if (window.location.pathname.startsWith('/trash')) {
-      log('You are on the Bin. Switch to Photos to delete normally.');
-    }
-    log('Ready. Start with Dry run enabled to verify selection works.');
-  }
+    return true;
+  });
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init, { once: true });
+    document.addEventListener('DOMContentLoaded', () => emit({ ready: true }), { once: true });
   } else {
-    init();
+    emit({ ready: true });
   }
 })();

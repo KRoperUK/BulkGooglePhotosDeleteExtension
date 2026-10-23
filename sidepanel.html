@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bulk Delete Google Photos</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 14px;
+    background: #1f2023; color: #e8eaed;
+    font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column; gap: 12px; min-height: 100vh;
+  }
+  h1 { font-size: 14px; font-weight: 600; margin: 0; letter-spacing: .2px; }
+  .conn { display: flex; align-items: center; gap: 7px; font-size: 11px; color: #9aa0a6; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #5f6368; flex: 0 0 auto; }
+  .dot.on { background: #81c995; }
+  .dot.warn { background: #fdd663; }
+  .progress { background: #26282c; border: 1px solid #3c4043; border-radius: 10px; padding: 12px; }
+  .phase { color: #9aa0a6; font-size: 12px; min-height: 17px; margin-bottom: 6px; }
+  .big { font-size: 28px; font-weight: 700; color: #8ab4f8; line-height: 1.1; }
+  .big small { font-size: 12px; font-weight: 500; color: #9aa0a6; margin-left: 5px; }
+  .bar-wrap { height: 7px; background: #121316; border-radius: 999px; overflow: hidden; margin: 12px 0 7px; }
+  .bar { height: 100%; width: 0; background: #8ab4f8; border-radius: 999px; transition: width .2s linear; }
+  .bar.indet { width: 35%; animation: slide 1.1s ease-in-out infinite; }
+  @keyframes slide { 0% { transform: translateX(-110%); } 100% { transform: translateX(310%); } }
+  .meta { display: flex; justify-content: space-between; color: #9aa0a6; font-size: 11px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  input[type=number] { width: 82px; background: #121316; color: #e8eaed; border: 1px solid #3c4043;
+                       border-radius: 6px; padding: 4px 6px; font: inherit; }
+  .hint { color: #9aa0a6; font-size: 11px; margin-top: -6px; }
+  .buttons { display: flex; gap: 8px; }
+  button { flex: 1; border: 0; border-radius: 7px; padding: 9px 10px; font: inherit; font-weight: 600; cursor: pointer; }
+  #start { background: #8ab4f8; color: #202124; }
+  #start:disabled { background: #3c4043; color: #80868b; cursor: not-allowed; }
+  #stop { background: #5f6368; color: #e8eaed; }
+  #stop:disabled { opacity: .45; cursor: not-allowed; }
+  #diagnose { background: #3c4043; color: #e8eaed; }
+  #confirmStrip { display: none; gap: 8px; align-items: center; background: #3a2222;
+                  border: 1px solid #8c4a4a; border-radius: 8px; padding: 8px; }
+  #confirmStrip.show { display: flex; }
+  #confirmText { flex: 1; min-width: 0; background: #121316; color: #e8eaed; border: 1px solid #5f6368;
+                 border-radius: 6px; padding: 5px 7px; font: inherit; }
+  #confirmGo { flex: 0 0 auto; background: #ef5350; color: #fff; }
+  #confirmCancel { flex: 0 0 auto; background: #5f6368; color: #e8eaed; }
+  .log { flex: 1; min-height: 120px; overflow: auto; background: #121316; border-radius: 8px;
+         padding: 8px; font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color: #bdc1c6; }
+  .log div { white-space: pre-wrap; word-break: break-word; }
+  .warn { color: #f28b82; font-size: 11px; }
+  label.check { display: flex; align-items: center; justify-content: space-between; }
+</style>
+</head>
+<body>
+  <div>
+    <h1>Bulk Delete Google Photos</h1>
+    <div class="conn"><span class="dot" id="dot"></span><span id="conn">Connecting…</span></div>
+  </div>
+
+  <div class="progress">
+    <div class="phase" id="phase">Idle</div>
+    <div class="big"><span id="count">0</span><small id="unit">deleted</small></div>
+    <div class="bar-wrap"><div class="bar" id="bar"></div></div>
+    <div class="meta"><span id="batch">Batch 0</span><span id="elapsed">0s</span></div>
+  </div>
+
+  <div class="row">Batch size <input type="number" id="batchSize" value="50" min="0" step="10"></div>
+  <div class="hint">0 = select everything in view, else this many per pass</div>
+  <div class="row">Max this run <input type="number" id="maxTotal" value="0" min="0" step="100"></div>
+  <div class="hint">0 = unlimited</div>
+  <div class="row">Delay (ms) <input type="number" id="delay" value="5" min="1" step="5"></div>
+  <label class="check">Dry run (select only) <input type="checkbox" id="dryRun" checked></label>
+  <label class="check">Confirm before deleting <input type="checkbox" id="confirm" checked></label>
+
+  <div class="buttons">
+    <button id="start">Start</button>
+    <button id="stop" disabled>Stop</button>
+  </div>
+  <div class="buttons"><button id="diagnose">Diagnose</button></div>
+
+  <div id="confirmStrip">
+    <input id="confirmText" type="text" placeholder="Type DELETE" autocomplete="off">
+    <button id="confirmGo">Go</button>
+    <button id="confirmCancel">Cancel</button>
+  </div>
+
+  <div class="log" id="log"></div>
+  <div class="warn">Deletes go to Bin, not permanently. Empty the Bin to free storage.</div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>

@@ -36,7 +36,7 @@
   </div>
 
   <h2>1. What the extension does</h2>
-  <p>Bulk Delete Google Photos is a browser extension that automates the Google Photos web interface so that photos can be selected and deleted in bulk. It adds a control panel to <code>photos.google.com</code> and, when you start a run, clicks the same interface elements you would click yourself.</p>
+  <p>Bulk Delete Google Photos is a browser extension that automates the Google Photos web interface so that photos can be selected and deleted in bulk. It adds a side panel alongside <code>photos.google.com</code> and, when you start a run, clicks the same interface elements you would click yourself.</p>
 
   <h2>2. Data we collect</h2>
   <p>None. The extension does not collect, request, or record any personal information. Specifically, it does not collect:</p>
@@ -55,7 +55,7 @@
   <p>The extension makes no network requests of any kind. It contains no <code>fetch</code>, <code>XMLHttpRequest</code>, <code>WebSocket</code> or <code>sendBeacon</code> calls, no remote script loading, and no remote code execution. All logic ships inside the installed package. There is no backend service, no API, and no analytics endpoint for it to talk to.</p>
 
   <h2>5. Permissions</h2>
-  <p>The extension requests <strong>no host permissions</strong>. It declares two warning-free permissions: <code>activeTab</code>, which grants access to the current tab only when you click the toolbar button, and <code>scripting</code>, which lets it inject its own bundled script into that tab. It cannot read or modify any other website, and the grant ends when you navigate away.</p>
+  <p>The extension requests <strong>no host permissions</strong>. It declares three warning-free permissions: <code>activeTab</code>, which grants access to the current tab only when you click the toolbar button; <code>sidePanel</code>, which lets that button open the extension's own panel; and <code>scripting</code>, which lets it inject its own bundled script into that tab. It cannot read or modify any other website, and the grant ends when you navigate away.</p>
 
   <h2>6. Storage</h2>
   <p>No data is stored. The extension does not use <code>localStorage</code>, <code>IndexedDB</code>, cookies, or any browser storage API. Settings you type into the panel exist only until the page is closed.</p>

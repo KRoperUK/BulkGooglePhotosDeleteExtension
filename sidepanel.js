@@ -1,0 +1,232 @@
+'use strict';
+
+const el = (id) => document.getElementById(id);
+
+const ui = {
+  dot: el('dot'),
+  conn: el('conn'),
+  phase: el('phase'),
+  count: el('count'),
+  bar: el('bar'),
+  batch: el('batch'),
+  elapsed: el('elapsed'),
+  batchSize: el('batchSize'),
+  maxTotal: el('maxTotal'),
+  delay: el('delay'),
+  dryRun: el('dryRun'),
+  confirm: el('confirm'),
+  start: el('start'),
+  stop: el('stop'),
+  diagnose: el('diagnose'),
+  confirmStrip: el('confirmStrip'),
+  confirmText: el('confirmText'),
+  confirmGo: el('confirmGo'),
+  confirmCancel: el('confirmCancel'),
+  log: el('log')
+};
+
+let tabId = null;
+let running = false;
+let startedAt = 0;
+let timer = null;
+
+function addLog(line) {
+  const div = document.createElement('div');
+  div.textContent = line;
+  ui.log.prepend(div);
+  while (ui.log.childElementCount > 300) ui.log.lastElementChild.remove();
+}
+
+function setConnection(text, state) {
+  ui.conn.textContent = text;
+  ui.dot.className = 'dot' + (state === 'ok' ? ' on' : state === 'warn' ? ' warn' : '');
+}
+
+function setRunning(value) {
+  running = value;
+  ui.start.disabled = value;
+  ui.stop.disabled = !value;
+  if (value) {
+    startedAt = Date.now();
+    if (timer) clearInterval(timer);
+    timer = setInterval(() => {
+      const s = Math.round((Date.now() - startedAt) / 1000);
+      ui.elapsed.textContent = s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
+    }, 500);
+  } else if (timer) {
+    clearInterval(timer);
+    timer = null;
+  }
+}
+
+function renderProgress(p) {
+  if (p.phase !== undefined && p.phase !== null) ui.phase.textContent = p.phase;
+  if (p.deleted !== undefined && p.deleted !== null) ui.count.textContent = Number(p.deleted).toLocaleString();
+  if (p.batch !== undefined && p.batch !== null) ui.batch.textContent = `Batch ${p.batch}`;
+  if (p.percent === null || p.percent === undefined) {
+    ui.bar.classList.add('indet');
+    ui.bar.style.width = '';
+  } else {
+    ui.bar.classList.remove('indet');
+    ui.bar.style.width = `${Math.max(0, Math.min(100, p.percent))}%`;
+  }
+}
+
+async function activeTab() {
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  return tabs[0] || null;
+}
+
+async function ping(id) {
+  try {
+    const res = await chrome.tabs.sendMessage(id, { type: 'bdgp:ping' });
+    return res && res.ok ? res : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+const looksLikePhotos = (url) =>
+  typeof url === 'string' && /^https:\/\/photos\.google\.com\//.test(url);
+
+async function connect() {
+  const tab = await activeTab();
+  if (!tab || tab.id === undefined) {
+    tabId = null;
+    setConnection('No active tab', 'warn');
+    return;
+  }
+
+  tabId = tab.id;
+
+  let res = await ping(tabId);
+
+  if (!res) {
+    // tab.url is undefined without the "tabs" permission, so a missing url is
+    // not evidence that this is the wrong tab. Only skip when we positively
+    // know it is somewhere else.
+    if (tab.url && !looksLikePhotos(tab.url)) {
+      setConnection('Open photos.google.com on this tab, then click the extension icon', 'warn');
+      return;
+    }
+
+    try {
+      await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] });
+      res = await ping(tabId);
+    } catch (e) {
+      res = null;
+    }
+  }
+
+  if (res) {
+    setConnection(res.onTrash ? 'Connected — this is the Bin page' : 'Connected to Google Photos', 'ok');
+    if (res.running) setRunning(true);
+    return;
+  }
+
+  setConnection('Click the extension icon on the Photos tab', 'warn');
+}
+
+function options() {
+  return {
+    batchSize: Math.max(0, parseInt(ui.batchSize.value, 10) || 0),
+    maxTotal: Math.max(0, parseInt(ui.maxTotal.value, 10) || 0),
+    delay: Math.max(1, parseInt(ui.delay.value, 10) || 5),
+    dryRun: ui.dryRun.checked
+  };
+}
+
+async function start() {
+  if (!tabId) await connect();
+
+  if (!tabId || !(await ping(tabId))) {
+    addLog('Not connected — click the extension icon on the Photos tab, then try again.');
+    setConnection('Click the extension icon on the Photos tab', 'warn');
+    return;
+  }
+
+  const opts = options();
+  try {
+    const res = await chrome.tabs.sendMessage(tabId, { type: 'bdgp:start', options: opts });
+    if (!res || !res.ok) {
+      addLog(`Could not start: ${(res && res.error) || 'no response'}`);
+      return;
+    }
+    setRunning(true);
+  } catch (e) {
+    addLog(`Could not start: ${e.message}`);
+    setConnection('Disconnected — reload the Photos tab', 'warn');
+  }
+}
+
+async function stop() {
+  if (!tabId) return;
+  try {
+    await chrome.tabs.sendMessage(tabId, { type: 'bdgp:stop' });
+  } catch (e) {
+    addLog(`Could not stop: ${e.message}`);
+  }
+}
+
+async function diagnose() {
+  if (!tabId) {
+    addLog('No Google Photos tab connected.');
+    return;
+  }
+  try {
+    const res = await chrome.tabs.sendMessage(tabId, { type: 'bdgp:diagnose' });
+    if (res && res.ok) res.report.forEach(addLog);
+    else addLog('Diagnose failed.');
+  } catch (e) {
+    addLog(`Diagnose failed: ${e.message}`);
+  }
+}
+
+ui.start.addEventListener('click', () => {
+  if (!ui.dryRun.checked && ui.confirm.checked) {
+    ui.confirmStrip.classList.add('show');
+    ui.confirmText.value = '';
+    ui.confirmText.focus();
+    return;
+  }
+  start();
+});
+
+ui.confirmGo.addEventListener('click', () => {
+  if (ui.confirmText.value !== 'DELETE') {
+    addLog('Confirmation not given. Aborted.');
+    return;
+  }
+  ui.confirmStrip.classList.remove('show');
+  start();
+});
+
+ui.confirmCancel.addEventListener('click', () => {
+  ui.confirmStrip.classList.remove('show');
+  ui.confirmText.value = '';
+});
+
+ui.confirmText.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') ui.confirmGo.click();
+});
+
+ui.stop.addEventListener('click', stop);
+ui.diagnose.addEventListener('click', diagnose);
+
+chrome.runtime.onMessage.addListener((msg) => {
+  if (!msg || msg.type !== 'bdgp:event') return;
+  if (msg.log) addLog(msg.log);
+  if (msg.progress) renderProgress(msg.progress);
+  if (msg.modal === true) setRunning(true);
+  if (msg.modal === false) setRunning(false);
+});
+
+connect();
+
+// Re-check the active tab, but only re-inject when the ping fails, so the
+// content script is not re-injected every few seconds.
+setInterval(async () => {
+  const tab = await activeTab();
+  if (tabId && tab && tab.id === tabId && (await ping(tabId))) return;
+  connect();
+}, 5000);
