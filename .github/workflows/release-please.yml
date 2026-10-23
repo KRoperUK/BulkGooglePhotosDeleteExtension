@@ -21,20 +21,9 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-      # Queue the release PR to merge itself once the required checks pass.
-      - name: Enable auto-merge on the release PR
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          pr=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,headRefName \
-                 --jq '[.[] | select(.headRefName | startswith("release-please--"))][0].number // empty')
-          if [ -z "$pr" ]; then
-            echo "No open release PR to auto-merge."
-            exit 0
-          fi
-          echo "Enabling auto-merge on PR #$pr"
-          gh pr merge "$pr" --auto --merge --repo "$GITHUB_REPOSITORY"
+      # The release PR is deliberately NOT auto-merged. Releases are cut by a
+      # human: merge the release PR when you are ready, which creates the tag and
+      # runs the publish job below.
 
   # A release created with GITHUB_TOKEN does not emit a `release` event that
   # other workflows can hear, so publish is invoked directly instead.
