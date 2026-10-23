@@ -130,6 +130,17 @@
     );
   }
 
+  const EMPTY_RE = /ready to add some photos|add some photos|get the app to back up|bereit, fotos hinzuzufügen|fotos hinzufügen|prêt à ajouter des photos|ajouter des photos|listo para añadir fotos|añadir fotos|pronto per aggiungere foto|aggiungi foto|klaar om foto's toe te voegen|foto's toevoegen|redo att lägga till foton|lägg till foton|klar til å legge til bilder|valmis lisäämään kuvia|gotowy do dodania zdjęć|готовы добавить фотографии|写真を追加|사진을 추가|أضف بعض الصور|מוכן להוסיף תמונות/i;
+
+  // True when the library is genuinely empty: nothing selectable on screen and
+  // Google's "add some photos" empty state is showing.
+  function libraryIsEmpty() {
+    if (findTileCheckboxes().length) return false;
+    if (photoHrefs().size) return false;
+    const text = document.body ? document.body.innerText.slice(0, 5000) : '';
+    return EMPTY_RE.test(text);
+  }
+
   function selectionCount() {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     let node;
@@ -225,7 +236,8 @@
     running: false,
     stop: false,
     deleted: 0,
-    batches: 0
+    batches: 0,
+    empty: false
   };
 
   function findSelectAllControl() {
@@ -544,6 +556,7 @@
     state.stop = false;
     state.deleted = 0;
     state.batches = 0;
+    state.empty = false;
 
     // Never assume the library starts unselected. A run that died with the page
     // (reload, extension reload, crash) leaves its selection behind, and the
@@ -566,6 +579,14 @@
     if (document.hidden) log('Warning: tab is not visible. Chrome throttles timers in background tabs — keep this tab focused.');
 
     try {
+      if (libraryIsEmpty()) {
+        state.empty = true;
+        log('Nothing to delete — this library is already empty.');
+        setStatus('Nothing to delete');
+        updateModal({ phase: 'Nothing to delete — library is empty', percent: 100 });
+        return;
+      }
+
       while (!state.stop) {
         const remaining = opts.maxTotal ? opts.maxTotal - state.deleted : Infinity;
         if (remaining <= 0) {
@@ -594,7 +615,13 @@
         }
 
         if (!selected) {
-          log('No photos could be selected — library appears empty or selectors failed.');
+          if (libraryIsEmpty()) {
+            state.empty = true;
+            log('Library is empty — nothing left to delete.');
+            setStatus('Finished — library is empty');
+          } else {
+            log('No photos could be selected — the library may be empty, or the selectors failed. Try Diagnose.');
+          }
           break;
         }
 
@@ -639,6 +666,14 @@
         // Wait on the photos themselves, not on a tile count: a stale grid still
         // has tiles, and that is what let the next pass run too early.
         const changed = await waitForGridChange(before, 30000);
+
+        if (libraryIsEmpty()) {
+          state.empty = true;
+          log('Library is empty — nothing left to delete.');
+          setStatus('Finished — library is empty');
+          break;
+        }
+
         if (!changed) {
           log('Warning: the visible photos did not change after deleting. The delete may not have applied, or the grid is stuck. Stopping.');
           break;
@@ -661,10 +696,14 @@
         await deselectAll();
       }
 
-      setStatus(`Finished — ${state.deleted} deleted in ${state.batches} batch(es)`);
+      setStatus(state.empty
+        ? `Finished — library is empty (${state.deleted} deleted)`
+        : `Finished — ${state.deleted} deleted in ${state.batches} batch(es)`);
       log('Run stopped.');
       updateModal({
-        phase: `Finished — ${state.deleted} deleted in ${state.batches} batch(es)`,
+        phase: state.empty
+          ? `Finished — library is empty (${state.deleted} deleted)`
+          : `Finished — ${state.deleted} deleted in ${state.batches} batch(es)`,
         deleted: state.deleted,
         percent: 100
       });
