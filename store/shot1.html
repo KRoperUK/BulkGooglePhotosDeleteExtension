@@ -56,8 +56,8 @@
   <div class="panel">
     <div class="head">Bulk Delete Google Photos</div>
     <div class="body">
-      <div class="row">Batch size <div class="box">0</div></div>
-      <div class="hint">0 = select everything in view (fastest)</div>
+      <div class="row">Batch size <div class="box">50</div></div>
+      <div class="hint">0 = select everything in view, else this many per pass</div>
       <div class="row">Max this run <div class="box">0</div></div>
       <div class="hint">0 = unlimited</div>
       <div class="row">Delay (ms) <div class="box">5</div></div>
@@ -65,9 +65,10 @@
       <div class="row"><span>Confirm before deleting</span><div class="cb"></div></div>
       <div class="buttons"><div class="btn primary">Start</div><div class="btn ghost">Stop</div></div>
       <div class="buttons"><div class="btn grey">Diagnose</div></div>
-      <div class="status">Dry run complete — 12,847 selected</div>
+      <div class="status">Dry run complete — delete control found</div>
       <div class="log">
-        <div>[22:41:07] Select-all control clicked → 12,847 selected</div>
+        <div>[22:41:07] Dry run: Delete control found — "Delete"</div>
+        <div>[22:41:07] Dry run: selected 50 item(s). Checking the delete path without deleting.</div>
         <div>[22:41:06] Ready. Start with Dry run enabled to verify selection works.</div>
       </div>
       <div class="warn">Deletes go to Bin, not permanently. Empty the Bin to free storage.</div>
