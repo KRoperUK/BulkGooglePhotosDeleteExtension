@@ -40,7 +40,7 @@ PRIVACY
 
 • No network requests. The extension never contacts any server, including ours - there isn't one.
 • No analytics, no telemetry, no local storage, no accounts.
-• No permissions requested in the manifest. It runs only on photos.google.com.
+• No host permissions. It can only run on photos.google.com, and only after you click the toolbar button.
 • Nothing is collected, sold or transmitted.
 
 SAFETY
@@ -107,10 +107,10 @@ https://kroperuk.github.io/BulkGooglePhotosDeleteExtension/privacy.html
 Bulk-select and delete photos and videos from the signed-in user's own Google Photos library.
 ```
 
-**Justification for host access (`https://photos.google.com/*`)**
+**Permission justification**
 
 ```
-The extension has exactly one function: automating the Google Photos web interface. Its content script must run on photos.google.com to render its control panel and perform the selection and deletion the user initiates. It requests no other host and no API permissions.
+No host permissions are requested. activeTab grants access to the current tab only when the user clicks the toolbar button, and scripting injects the extension's own bundled content.js into that tab. content.js refuses to run unless the hostname is exactly photos.google.com.
 ```
 
 **Are you using remote code?** No — all logic ships inside the package. Nothing is fetched or evaluated at runtime.
@@ -119,16 +119,16 @@ The extension has exactly one function: automating the Google Photos web interfa
 
 ## Test instructions
 
-Reviewers must be able to exercise this without destroying a real photo library. This field is capped at 500 characters; the text below is 457.
+Reviewers must be able to exercise this without destroying a real photo library. This field is capped at 500 characters; the text below is 455.
 
 ```
-Automates the Google Photos web UI. Please test without deleting:
-1. Install, open photos.google.com while signed in.
-2. A dark panel appears bottom-right.
-3. Leave "Dry run (select only)" ticked (default).
+Automates the Google Photos web UI. Test without deleting:
+1. Install, pin the extension, open photos.google.com signed in.
+2. Click the toolbar icon. A round button appears bottom-right; click it to open the panel.
+3. Leave "Dry run (select only)" ticked.
 4. Click Start: it selects photos, reports the count, then deselects. Nothing is deleted.
-5. Click Diagnose to print selector details in the log.
-Unticking Dry run and typing DELETE performs real deletions (to Bin). No permissions, no network calls.
+5. Click Diagnose for selector details.
+Unticking Dry run + typing DELETE deletes to Bin. No network calls.
 ```
 
 ## After the first upload

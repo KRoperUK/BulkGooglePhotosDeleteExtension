@@ -15,6 +15,8 @@ A local Chrome extension that selects and deletes your own Google Photos in batc
 
 A round button appears bottom-right. Click it to open the control panel; the `−` in the panel header collapses it back to the button.
 
+Because the extension uses `activeTab` rather than host permissions, it cannot inject itself automatically. Open Photos, then click the toolbar icon once per page load — clicking it again reopens the panel. Pin it via the puzzle-piece menu so it is always visible.
+
 ## Use
 
 1. Leave **Dry run** checked and click **Start**. It selects a batch, reports the count, and deselects without deleting.

@@ -1,7 +1,14 @@
 (() => {
   'use strict';
 
-  if (window.__bdgpLoaded) return;
+  // Injected on demand via the toolbar button, so confirm we are on the right
+  // site before touching anything.
+  if (location.hostname !== 'photos.google.com') return;
+
+  if (window.__bdgpLoaded) {
+    if (window.__bdgpOpen) window.__bdgpOpen();
+    return;
+  }
   window.__bdgpLoaded = true;
 
   // ---------- helpers ----------
@@ -847,6 +854,12 @@
       ui.panelEl.hidden = true;
       ui.bubble.hidden = false;
     });
+
+    // Clicking the toolbar button again reopens the panel.
+    window.__bdgpOpen = () => {
+      ui.panelEl.hidden = false;
+      ui.bubble.hidden = true;
+    };
 
     ui.startBtn.addEventListener('click', () => {
       if (window.location.pathname.startsWith('/trash')) {

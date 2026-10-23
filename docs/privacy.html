@@ -55,7 +55,7 @@
   <p>The extension makes no network requests of any kind. It contains no <code>fetch</code>, <code>XMLHttpRequest</code>, <code>WebSocket</code> or <code>sendBeacon</code> calls, no remote script loading, and no remote code execution. All logic ships inside the installed package. There is no backend service, no API, and no analytics endpoint for it to talk to.</p>
 
   <h2>5. Permissions</h2>
-  <p>The extension's manifest requests <strong>no permissions at all</strong>. It declares a single content script limited to <code>https://photos.google.com/*</code>. It cannot read or modify any other website, and it holds no access to your file system, tabs, history, or bookmarks.</p>
+  <p>The extension requests <strong>no host permissions</strong>. It declares two warning-free permissions: <code>activeTab</code>, which grants access to the current tab only when you click the toolbar button, and <code>scripting</code>, which lets it inject its own bundled script into that tab. It cannot read or modify any other website, and the grant ends when you navigate away.</p>
 
   <h2>6. Storage</h2>
   <p>No data is stored. The extension does not use <code>localStorage</code>, <code>IndexedDB</code>, cookies, or any browser storage API. Settings you type into the panel exist only until the page is closed.</p>
