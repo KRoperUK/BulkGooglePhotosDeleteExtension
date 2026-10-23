@@ -1,17 +1,13 @@
-chrome.action.onClicked.addListener(async (tab) => {
-  if (!tab.id) return;
+'use strict';
 
-  try {
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: ["content.js"]
-    });
-  } catch (err) {
-    // Chrome refuses to script some pages (chrome://, the Web Store, PDFs).
-    // Say so on the badge rather than failing silently.
-    await chrome.action.setBadgeBackgroundColor({ color: "#ef5350" });
-    await chrome.action.setBadgeText({ text: "!", tabId: tab.id });
-    setTimeout(() => chrome.action.setBadgeText({ text: "", tabId: tab.id }), 3000);
-    console.warn("[bulk-delete-google-photos]", err);
-  }
-});
+// Clicking the toolbar button opens the side panel rather than injecting a
+// floating panel into the page.
+function configurePanel() {
+  chrome.sidePanel
+    .setPanelBehavior({ openPanelOnActionClick: true })
+    .catch((err) => console.warn('[bulk-delete-google-photos]', err));
+}
+
+chrome.runtime.onInstalled.addListener(configurePanel);
+chrome.runtime.onStartup.addListener(configurePanel);
+configurePanel();

@@ -13,16 +13,16 @@ A local Chrome extension that selects and deletes your own Google Photos in batc
 3. Click **Load unpacked** and select this folder
 4. Open `https://photos.google.com`
 
-Clicking the toolbar icon opens the control panel bottom-right, already expanded. The `−` in the header collapses it to a round button, and clicking that button or the toolbar icon again reopens it.
+Clicking the toolbar icon opens a **side panel**. It sits beside the page rather than over the photo grid, and it drives the tab from there — the actual selection and deletion still run inside the page.
 
-Because the extension uses `activeTab` rather than host permissions, it cannot inject itself automatically. Open Photos, then click the toolbar icon once per page load. Pin it via the puzzle-piece menu so it is always visible.
+Because the extension uses `activeTab` rather than host permissions, it cannot inject itself automatically: click the toolbar icon once per page load. Pin it via the puzzle-piece menu so it is always visible.
 
 ## Use
 
 1. Leave **Dry run** checked and click **Start**. It selects a batch, reports the count, and deselects without deleting.
 2. If the count looks right, uncheck **Dry run**, click **Start**, and type `DELETE` to confirm.
 3. Keep the tab focused. Chrome throttles timers in background tabs and the run will stall.
-4. A centred progress panel shows the live deleted count, current batch, phase and elapsed time, with its own Stop button. It dismisses itself a few seconds after a run ends.
+4. The side panel shows the live deleted count, current batch, phase and elapsed time.
 5. Deletions go to **Bin**, not permanently. To actually free storage, empty the Bin:
    `https://photos.google.com/trash` → **Empty bin**. Photos in the Bin still count against your quota until then.
 

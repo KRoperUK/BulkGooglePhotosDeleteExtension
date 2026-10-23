@@ -23,13 +23,13 @@ Select and delete your own Google Photos in batches. Dry run, stop control, no l
 ```
 Bulk Delete Google Photos is a small, local tool for clearing out a Google Photos library in bulk, because Google's own interface makes selecting tens of thousands of photos impractical.
 
-Google Photos has no "delete everything" button. This extension adds a panel to photos.google.com that automates the exact clicks you would otherwise make by hand: select a batch, press Delete, confirm, wait for the grid to refresh, and repeat.
+Google Photos has no "delete everything" button. This extension adds a side panel to photos.google.com that automates the exact clicks you would otherwise make by hand: select a batch, press Delete, confirm, wait for the grid to refresh, and repeat.
 
 FEATURES
 
 • Dry run mode - selects and counts without deleting, so you can verify it works before committing
 • Select everything in view, or a fixed batch size (it scrolls the grid to keep loading more)
-• Live progress panel showing deleted count, batch number and elapsed time
+• Live progress showing deleted count, batch number and elapsed time
 • Stop button that halts immediately
 • Optional hard cap on how many items a single run may delete
 • Typed confirmation required before deleting, on by default
@@ -110,7 +110,7 @@ Bulk-select and delete photos and videos from the signed-in user's own Google Ph
 **Permission justification**
 
 ```
-No host permissions are requested. activeTab grants access to the current tab only when the user clicks the toolbar button, and scripting injects the extension's own bundled content.js into that tab. content.js refuses to run unless the hostname is exactly photos.google.com.
+No host permissions are requested. activeTab grants access to the current tab only when the user clicks the toolbar button, sidePanel lets the toolbar button open the extension's own panel, and scripting injects the extension's own bundled content.js into that tab. content.js refuses to run unless the hostname is exactly photos.google.com.
 ```
 
 **Are you using remote code?** No — all logic ships inside the package. Nothing is fetched or evaluated at runtime.
@@ -119,12 +119,12 @@ No host permissions are requested. activeTab grants access to the current tab on
 
 ## Test instructions
 
-Reviewers must be able to exercise this without destroying a real photo library. This field is capped at 500 characters; the text below is 420.
+Reviewers must be able to exercise this without destroying a real photo library. This field is capped at 500 characters; the text below is 425.
 
 ```
 Automates the Google Photos web UI. Test without deleting:
 1. Install, pin the extension, open photos.google.com signed in.
-2. Click the toolbar icon. The panel opens bottom-right.
+2. Click the toolbar icon. The side panel opens on the right.
 3. Leave "Dry run (select only)" ticked.
 4. Click Start: it selects photos, reports the count, then deselects. Nothing is deleted.
 5. Click Diagnose for selector details.
