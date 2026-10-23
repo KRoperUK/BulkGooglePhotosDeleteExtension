@@ -14,7 +14,13 @@ extension ships as unbundled files loaded directly by Chrome.
 - `background.js` — service worker: opens the side panel and injects `content.js`.
 - `sidepanel.html` / `sidepanel.js` — the control panel UI.
 - `icons/` — toolbar and store icons.
-- `docs/` — privacy policy, store listing copy, CWS setup.
+- `_locales/<lang>/messages.json` — i18n bundle. `extName`/`extDesc` localize the
+  extension **name** and the Chrome Web Store **summary** (the manifest references
+  them as `__MSG_extName__`/`__MSG_extDesc__`). `extDesc` is the store summary and
+  must stay ≤132 chars; `tools/validate-locales.mjs` (run in CI) enforces this.
+  Full-description translations are dashboard-only — see `docs/STORE-LISTING-i18n.md`.
+- `docs/` — privacy policy, store listing copy (`STORE-LISTING.md`), localized
+  listing copy (`STORE-LISTING-i18n.md`), CWS setup.
 - `test/` — jsdom tests for the selection logic (run with `npm test`).
 - `package.json` exists **only** for the test harness. The extension itself has no npm dependencies and is not bundled.
 
