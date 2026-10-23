@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.4.0](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/compare/v1.3.0...v1.4.0) (2026-10-23)
+
+
+### Features
+
+* attach build and source archives to every release ([c9b9d27](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/c9b9d27a3752c29fe64f54809084375a93b2cd04))
+* attach build and source archives to every release ([41f5ba6](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/41f5ba65a3d18808aff177764f76880af861d134))
+* pause runs when the tab is backgrounded and show it in the panel ([209e415](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/209e4152511dde3e1e019958b08a2e70a774633b)), closes [#30](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/issues/30)
+
+
+### Bug Fixes
+
+* collapse duplicate entries in CHANGELOG.md ([f85091b](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/f85091b35161038f5f754e70bed9dc61783e4c58))
+* collapse duplicate entries in CHANGELOG.md ([a9d1296](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/a9d1296d83327cfe729a8c71cf8e025b75af76d6))
+* collapse duplicate entries in the release PR body ([399eecf](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/399eecf88f807fdd8b5f9cc54cc4a70bf0e7e5f1))
+* collapse duplicate entries in the release PR body ([48b318e](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/48b318eba1002e3bebd86f0fa30808ff5501384a))
+* collapse duplicate release-note entries ([c7c39eb](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/c7c39eb3aa70dbf20f65b12cd7b9862ac77a7e0e))
+* collapse duplicate release-note entries ([a5d5d8d](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/a5d5d8d562927d0b2a3fd11208a4be49032f1acb))
+* enforce batch size as a hard ceiling on deletions ([b6094bb](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/b6094bb4bb52341de26c22e236473ded441509ac)), closes [#29](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/issues/29)
+
+
+### Performance Improvements
+
+* scope selectionCount to the selection toolbar first ([2a20942](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/2a20942229fb6d3804ffe44f9c63098ef54de4f8)), closes [#33](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/issues/33)
+
 ## [1.3.0](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/compare/v1.2.1...v1.3.0) (2026-10-23)
 
 
