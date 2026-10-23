@@ -1,0 +1,12 @@
+{
+  "name": "bulk-delete-google-photos",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Tooling and tests for the Bulk Delete Google Photos extension. The extension itself ships as unbundled MV3 files; this manifest exists only for the test harness.",
+  "scripts": {
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0"
+  }
+}

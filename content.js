@@ -141,11 +141,11 @@
     return EMPTY_RE.test(text);
   }
 
-  function selectionCount() {
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  function countInText(root, budget) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     let node;
     let seen = 0;
-    while ((node = walker.nextNode()) && seen < 6000) {
+    while ((node = walker.nextNode()) && seen < budget) {
       seen++;
       const text = node.nodeValue;
       if (!text || text.length > 80) continue;
@@ -155,6 +155,28 @@
         if (Number.isFinite(n)) return n;
       }
     }
+    return null;
+  }
+
+  function selectionCount() {
+    // Prefer the selection toolbar/banner, where the "N selected" counter
+    // actually lives. Scoping the scan there is far cheaper than walking the
+    // whole document and avoids false matches on unrelated UI text that
+    // happens to read like "<number> selected".
+    for (const region of document.querySelectorAll('[role="toolbar"], [role="banner"], header')) {
+      if (!visible(region)) continue;
+      const n = countInText(region, 400);
+      if (n !== null) return n;
+    }
+
+    // Fall back to a bounded whole-document walk for layouts where the counter
+    // is not inside a recognised toolbar region.
+    const docCount = countInText(document.body, 6000);
+    if (docCount !== null) return docCount;
+
+    // Last resort: count checked tiles. This under-reports when the selection
+    // spans off-screen tiles the virtualised grid has not rendered, so it is
+    // only reached when no textual counter was found at all.
     return findTileCheckboxes().filter((el) => el.getAttribute('aria-checked') === 'true').length;
   }
 
@@ -188,20 +210,34 @@
 
   const DESELECT_RE = /deselect|unselect|abwählen|auswahl aufheben|désélectionner|desseleccionar|deseleziona|deselecteren|avmarkera|fjordel|odznacz|снять выделение|取消选择|取消選取|選択を解除|선택 해제|إلغاء تحديد|בטל בחירה/i;
 
-  function selectOne(el) {
-    if (!el || !el.isConnected) return Promise.resolve(false);
+  async function selectOne(el) {
+    if (!el || !el.isConnected) return false;
 
     el.click();
-    return sleep(25).then(() => {
-      if (el.getAttribute('aria-checked') === 'true') return true;
-      if (!el.isConnected) return false;
 
-      // The click did not register; try the pointer sequence instead of clicking twice.
-      for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup']) {
-        el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
-      }
-      return sleep(25).then(() => el.getAttribute('aria-checked') === 'true');
-    });
+    // aria-checked lags the click on Google's React grid, especially under
+    // load. Poll for the flip before concluding the click failed — a 25ms
+    // snapshot routinely under-reports, which used to trigger the pointer
+    // fallback below and extend the selection anchor into a range (deleting
+    // far more than the batch size).
+    for (let waited = 0; waited < 300; waited += 50) {
+      await sleep(50);
+      if (!el.isConnected) return false;
+      if (el.getAttribute('aria-checked') === 'true') return true;
+    }
+
+    // The click genuinely did not register. Retry with a plain click rather
+    // than a pointerdown/up sequence: that sequence is what Google interprets
+    // as an anchor-based range extension, so it must never run on a tile that
+    // may already belong to the current selection.
+    if (!el.isConnected) return false;
+    el.click();
+    for (let waited = 0; waited < 300; waited += 50) {
+      await sleep(50);
+      if (!el.isConnected) return false;
+      if (el.getAttribute('aria-checked') === 'true') return true;
+    }
+    return el.getAttribute('aria-checked') === 'true';
   }
 
   function pressSelectAll() {
@@ -228,6 +264,39 @@
       await sleep(interval);
     }
     return null;
+  }
+
+  // Chrome throttles timers in background tabs, which stalls a run. Rather than
+  // pressing on throttled (or sleeping a fixed guess), pause until the tab is
+  // foregrounded again and tell the panel so the user sees why nothing moves.
+  async function waitForVisible() {
+    if (!document.hidden) return;
+
+    log('Tab is in the background — Chrome throttles timers here. Pausing until you return to this tab.');
+    setStatus('Paused — bring this tab to the foreground');
+    updateModal({ phase: 'Paused — bring this tab to the foreground', paused: true });
+
+    await new Promise((resolve) => {
+      const onVisible = () => {
+        if (document.hidden || state.stop) return;
+        document.removeEventListener('visibilitychange', onVisible);
+        resolve();
+      };
+      document.addEventListener('visibilitychange', onVisible);
+      // state.stop can be set while hidden; poll so a Stop during pause unblocks.
+      const poll = setInterval(() => {
+        if (!document.hidden || state.stop) {
+          clearInterval(poll);
+          document.removeEventListener('visibilitychange', onVisible);
+          resolve();
+        }
+      }, 500);
+    });
+
+    if (!state.stop) {
+      log('Tab visible again — resuming.');
+      updateModal({ phase: 'Resuming…', paused: false });
+    }
   }
 
   // ---------- core actions ----------
@@ -501,6 +570,34 @@
     return counted || selected;
   }
 
+  // Click checked tiles off until the selection is no larger than `limit`.
+  // A safety net for the delete step: even if the selection overshot (anchor
+  // range extension, aria-checked lag), the batch size stays a hard ceiling on
+  // what actually gets deleted. Returns the selection count after trimming.
+  async function trimSelectionTo(limit) {
+    if (!limit) return selectionCount();
+
+    for (let guard = 0; guard < 400 && !state.stop; guard++) {
+      const current = selectionCount();
+      if (current <= limit) return current;
+
+      const checked = findTileCheckboxes().filter((el) => el.getAttribute('aria-checked') === 'true');
+      if (!checked.length) return current;
+
+      const surplus = current - limit;
+      let undone = 0;
+      for (const tile of checked) {
+        if (undone >= surplus || state.stop) break;
+        if (!tile.isConnected || tile.getAttribute('aria-checked') !== 'true') continue;
+        tile.click();
+        await sleep(40);
+        undone++;
+      }
+      if (!undone) return current;
+    }
+    return selectionCount();
+  }
+
   async function deselectAll() {
     const meta = navigator.platform.toLowerCase().includes('mac');
     document.body.dispatchEvent(new KeyboardEvent('keydown', {
@@ -625,6 +722,16 @@
           break;
         }
 
+        // Enforce the batch size as a hard ceiling on what gets deleted. The
+        // live selection can exceed `batch` despite the click cap (anchor range
+        // extension, aria-checked lag), so trim the surplus before going near
+        // Delete rather than deleting whatever happens to be selected.
+        if (batch && selected > batch) {
+          log(`Selection overshot: ${selected} selected for a batch of ${batch}. Trimming the surplus.`);
+          selected = await trimSelectionTo(batch);
+          log(`Trimmed to ${selected}.`);
+        }
+
         if (opts.dryRun) {
           log(`Dry run: selected ${selected} item(s). Checking the delete path without deleting.`);
 
@@ -679,8 +786,7 @@
           break;
         }
 
-        if (document.hidden) log('Tab hidden — pausing 5s so throttling does not stall the run.');
-        if (document.hidden) await sleep(5000);
+        if (document.hidden) await waitForVisible();
       }
     } catch (err) {
       log(`Error: ${err.message}`);
@@ -732,8 +838,8 @@
     emit({ status: text });
   }
 
-  function updateModal({ phase, deleted, batch, percent }) {
-    emit({ progress: { phase, deleted, batch, percent } });
+  function updateModal({ phase, deleted, batch, percent, paused }) {
+    emit({ progress: { phase, deleted, batch, percent, paused } });
   }
 
   function showModal() {
