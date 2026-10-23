@@ -15,11 +15,37 @@ jobs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+      # The release PR body is built from the same commit list as the changelog,
+      # so it carries the same merge-commit duplicates. This has to happen here
+      # rather than in a pull_request workflow: Release Please edits the PR with
+      # GITHUB_TOKEN, and those events do not trigger workflows.
+      - name: Collapse duplicate entries in the release PR body
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          pr=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,headRefName \
+                 --jq '[.[] | select(.headRefName | startswith("release-please--"))][0].number // empty')
+          if [ -z "$pr" ]; then
+            echo "No open release PR."
+            exit 0
+          fi
+          gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json body --jq .body > /tmp/body.md
+          python3 tools/dedupe-release-notes.py /tmp/body.md > /tmp/body-deduped.md
+          if cmp -s /tmp/body.md /tmp/body-deduped.md; then
+            echo "No duplicate entries in PR #$pr."
+            exit 0
+          fi
+          gh pr edit "$pr" --repo "$GITHUB_REPOSITORY" --body-file /tmp/body-deduped.md
+          echo "Collapsed duplicate entries in PR #$pr."
 
       # The release PR is deliberately NOT auto-merged. Releases are cut by a
       # human: merge the release PR when you are ready, which creates the tag and
