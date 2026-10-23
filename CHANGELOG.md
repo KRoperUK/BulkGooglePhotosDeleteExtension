@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.5.0](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/compare/v1.4.0...v1.5.0) (2026-10-23)
+
+
+### Features
+
+* localize Chrome Web Store listing (10 languages) via _locales ([c9ed025](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/c9ed025a7e184aa2a5fb411727782f45ae94c669))
+* localize store listing for vi, th, uk, ar ([d0be9ca](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/d0be9caf9a7cbb329497403d9db04d234abe322b))
+* localize store title and summary for nl, pl, tr, id ([ada95ca](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/ada95caed414bc82bcf4c15304b7a8a25b3bf4fc))
+* localize store title and summary for vi, th, uk, ar ([3b96287](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/3b962872774c14903af0d23ca5aae791544095ef))
+* localize store title and summary via _locales ([48ab52e](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/48ab52e64f6682c654f8af4f9f0be0036de523d0))
+
 ## [1.4.0](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/compare/v1.3.0...v1.4.0) (2026-10-23)
 
 
