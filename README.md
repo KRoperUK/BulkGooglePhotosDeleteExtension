@@ -66,3 +66,17 @@ Versioning is automated with [Release Please](https://github.com/googleapis/rele
 `ci.yml` validates the manifest version, checks `content.js` syntax and confirms the icon assets exist on every push and PR.
 
 The one-time credential setup and required repository secrets are documented in [docs/CWS-SETUP.md](docs/CWS-SETUP.md).
+
+### Release assets
+
+Every release carries:
+
+| Asset | Purpose |
+|---|---|
+| `bulk-delete-google-photos-<version>.zip` | The exact package submitted to the Chrome Web Store. This is also the file to upload to the Edge Add-ons store: the MV3 package is identical across Chromium browsers, so there is no separate build. |
+| `bulk-delete-google-photos-<version>-source.zip` | Tagged source, for reviewers or anyone who wants to read the code before installing. |
+| `SHA256SUMS.txt` | Checksums for both archives. |
+
+Assets are attached before the store upload, so a release still carries them when publishing is blocked (for example while a previous version is in review).
+
+No `.crx` is attached. Chrome blocks off-store CRX installs in most configurations, a self-signed CRX produces a different extension ID from the store listing, and Edge cannot use CRX at all — so it would be a confusing artefact rather than a useful one.

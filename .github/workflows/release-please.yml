@@ -30,6 +30,8 @@ jobs:
   publish:
     needs: release-please
     if: needs.release-please.outputs.release_created == 'true'
+    permissions:
+      contents: write
     uses: ./.github/workflows/publish.yml
     with:
       tag: ${{ needs.release-please.outputs.tag_name }}
