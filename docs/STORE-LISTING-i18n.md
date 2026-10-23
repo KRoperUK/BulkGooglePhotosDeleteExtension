@@ -34,11 +34,18 @@ here for review. Edit the `messages.json` files, not this table — CI
 | `ru` | Russian | Массовое удаление фото Google Фото партиями для освобождения места. Пробный прогон, подтверждение, стоп, без лимитов, офлайн. |
 | `zh_CN` | Chinese (Simplified) | 批量删除 Google 相册照片，释放存储空间。支持试运行预览、输入确认、停止按钮，无数量限制，无网络请求。 |
 | `hi` | Hindi | Google Photos को बैच में मास-डिलीट कर स्टोरेज खाली करें। ड्राई-रन प्रीव्यू, पुष्टि, स्टॉप बटन, कोई सीमा नहीं, कोई नेटवर्क नहीं। |
+| `nl` | Dutch | Verwijder Google Foto's in bulk, in batches, om opslag vrij te maken. Testrun, bevestiging, stopknop, geen limieten, offline. |
+| `pl` | Polish | Masowo usuwaj zdjęcia z Google Zdjęć partiami, aby zwolnić miejsce. Tryb próbny, potwierdzenie, stop, bez limitów, offline. |
+| `tr` | Turkish | Google Fotoğraflar'ı toplu olarak gruplar halinde silip depolama alanı açın. Deneme modu, onay, durdurma, sınır yok, çevrimdışı. |
+| `id` | Indonesian | Hapus massal Google Foto per batch untuk mengosongkan penyimpanan. Mode uji coba, konfirmasi, tombol stop, tanpa batas, offline. |
 
 > Product-name note: Google localizes the product name itself — "Google Fotos"
-> (de/pt), "Google Foto" (it), "Google 포토" (ko), "Google 相册" (zh), "Google Фото"
-> (ru). The English brand is kept where Google commonly leaves it in Latin script
-> (es/fr/hi/ja). Verify against the current in-product strings if you want exact parity.
+> (de/pt), "Google Foto" (it/id/nl¹), "Google 포토" (ko), "Google 相册" (zh),
+> "Google Фото" (ru), "Google Fotoğraflar" (tr), "Google Zdjęcia" (pl). The English
+> brand is kept where Google commonly leaves it in Latin script (es/fr/hi/ja).
+> Verify against the current in-product strings if you want exact parity.
+>
+> ¹ Dutch uses the possessive "Google Foto's" for the plural.
 
 ---
 
@@ -476,4 +483,176 @@ Google Photos में "सभी चुनें" या "सभी डिल�
 नोट
 
 यह एक अनौपचारिक टूल है। यह Google से संबद्ध, अनुमोदित या प्रायोजित नहीं है। "Google Photos" Google LLC का ट्रेडमार्क है, जिसका उपयोग केवल यह बताने के लिए किया गया है कि एक्सटेंशन किसके साथ काम करता है।
+```
+
+### Dutch (`nl`)
+
+```
+Bulk Delete Google Photos is een klein, lokaal hulpmiddel om een Google Foto's-bibliotheek snel leeg te maken: het selecteert en verwijdert duizenden foto's en video's in batches, omdat de interface van Google het onpraktisch maakt om er met de hand zoveel te selecteren.
+
+Google Foto's heeft geen knop "alles selecteren" of "alles verwijderen", en tienduizenden items met slepen selecteren is traag en foutgevoelig. Deze extensie voegt een zijpaneel toe aan photos.google.com dat precies de klikken automatiseert die je anders zelf zou doen: een batch selecteren, op Verwijderen drukken, bevestigen, wachten tot het raster herlaadt, en herhalen — om een account leeg te maken of opslag vrij te maken zonder de hele dag te klikken.
+
+FUNCTIES
+
+• Bulk/massaal verwijderen in batches: selecteer alles wat zichtbaar is of een vaste batchgrootte, en het raster scrollt om meer te laden
+• Testrun-modus: selecteert en telt zonder te verwijderen, zodat je het vooraf kunt controleren
+• Live voortgang: verwijderde aantallen, batchnummer, fase en verstreken tijd
+• Stopknop die onmiddellijk afbreekt
+• Optionele bovengrens per run
+• Getypte bevestiging vereist vóór verwijderen (standaard aan)
+• Werkt met de weergave Archief
+• Ongeveer 20 interfacetalen
+
+VEELGEBRUIKTE SCENARIO'S
+
+• Alle foto's van een oud of tweede account verwijderen
+• Opslag vrijmaken door duizenden oude foto's en video's te verwijderen
+• Een gedeeld of testaccount leegmaken voordat je het doorgeeft
+• Grote batches verwijderen die de webinterface te traag met de hand selecteert
+
+PRIVACY
+
+• Geen netwerkverzoeken. De extensie neemt met geen enkele server contact op, ook niet met de onze — die bestaat niet.
+• Geen analyse, geen telemetrie, geen lokale opslag, geen accounts.
+• Geen host-permissies. Werkt alleen op photos.google.com, en alleen nadat je op de werkbalkknop klikt.
+• Er wordt niets verzameld, verkocht of verzonden.
+
+VEILIGHEID
+
+• Verwijderingen gaan naar de Prullenbak, niet het niets — 30 dagen herstelbaar
+• De extensie weigert te werken op de Prullenbak-pagina, omdat verwijderen daar definitief is
+• Werkt alleen op het account dat al is ingelogd in het tabblad dat je gebruikt
+
+OPMERKING
+
+Dit is een onofficieel hulpmiddel. Het is niet gelieerd aan, goedgekeurd door of gesponsord door Google. "Google Foto's" is een handelsmerk van Google LLC, alleen gebruikt om te beschrijven waarmee de extensie werkt.
+```
+
+### Polish (`pl`)
+
+```
+Bulk Delete Google Photos to małe, lokalne narzędzie do szybkiego opróżniania biblioteki Google Zdjęć: zaznacza i usuwa partiami tysiące zdjęć i filmów, ponieważ interfejs Google sprawia, że ręczne zaznaczanie tak wielu elementów jest niepraktyczne.
+
+Google Zdjęcia nie mają przycisku „zaznacz wszystko" ani „usuń wszystko", a zaznaczanie dziesiątek tysięcy elementów przeciąganiem jest powolne i podatne na błędy. To rozszerzenie dodaje panel boczny w photos.google.com, który automatyzuje te same kliknięcia, które wykonałbyś ręcznie: zaznacz partię, naciśnij Usuń, potwierdź, poczekaj na przeładowanie siatki i powtórz — aby opróżnić konto lub zwolnić miejsce bez klikania przez cały dzień.
+
+FUNKCJE
+
+• Masowe usuwanie partiami: zaznacz wszystko, co widoczne, lub stały rozmiar partii, a siatka przewija się, by wczytać więcej
+• Tryb próbny: zaznacza i liczy bez usuwania, aby sprawdzić przed wykonaniem
+• Postęp na żywo: liczba usuniętych, numer partii, etap i czas
+• Przycisk stop zatrzymujący natychmiast
+• Opcjonalny limit na jedno uruchomienie
+• Wymagane potwierdzenie wpisaniem przed usunięciem (domyślnie włączone)
+• Działa z widokiem Archiwum
+• Około 20 języków interfejsu
+
+TYPOWE ZASTOSOWANIA
+
+• Usunięcie wszystkich zdjęć ze starego lub dodatkowego konta
+• Zwolnienie miejsca przez usunięcie tysięcy starych zdjęć i filmów
+• Opróżnienie konta współdzielonego lub testowego przed przekazaniem
+• Usuwanie dużych partii, które interfejs webowy zbyt wolno zaznacza ręcznie
+
+PRYWATNOŚĆ
+
+• Brak żądań sieciowych. Rozszerzenie nie kontaktuje się z żadnym serwerem, w tym naszym — on nie istnieje.
+• Brak analityki, telemetrii, pamięci lokalnej i kont.
+• Brak uprawnień do witryn. Działa tylko na photos.google.com i tylko po kliknięciu przycisku.
+• Nic nie jest zbierane, sprzedawane ani przesyłane.
+
+BEZPIECZEŃSTWO
+
+• Usunięte elementy trafiają do Kosza, nie w nicość — można je odzyskać przez 30 dni
+• Rozszerzenie odmawia działania na stronie Kosza, ponieważ usuwanie jest tam nieodwracalne
+• Działa tylko na koncie już zalogowanym na używanej karcie
+
+UWAGA
+
+To narzędzie nieoficjalne. Nie jest powiązane z Google ani przez Google zatwierdzone czy sponsorowane. „Google Zdjęcia" to znak towarowy Google LLC, użyty wyłącznie do opisania, z czym rozszerzenie współpracuje.
+```
+
+### Turkish (`tr`)
+
+```
+Bulk Delete Google Photos, bir Google Fotoğraflar kitaplığını hızlıca boşaltmak için küçük, yerel bir araçtır: binlerce fotoğraf ve videoyu gruplar halinde seçip siler, çünkü Google'ın kendi arayüzü bu kadar çok öğeyi elle seçmeyi pratik olmaktan çıkarır.
+
+Google Fotoğraflar'da "tümünü seç" ya da "tümünü sil" düğmesi yoktur ve on binlerce öğeyi sürükleyerek seçmek yavaş ve hataya açıktır. Bu uzantı, photos.google.com'a bir yan panel ekleyerek elle yapacağınız tıklamaları otomatikleştirir: bir grup seçin, Sil'e basın, onaylayın, ızgaranın yeniden yüklenmesini bekleyin ve tekrarlayın — böylece bir hesabı gün boyu tıklamadan boşaltabilir veya depolama alanı açabilirsiniz.
+
+ÖZELLİKLER
+
+• Gruplar halinde toplu silme: görünen her şeyi ya da sabit bir grup boyutu seçin, ızgara daha fazlasını yüklemek için kayar
+• Deneme modu: silmeden seçip sayar, böylece çalıştırmadan önce doğrulayabilirsiniz
+• Canlı ilerleme: silinen sayısı, grup numarası, aşama ve geçen süre
+• Hemen durduran durdurma düğmesi
+• Çalıştırma başına isteğe bağlı üst sınır
+• Silmeden önce yazarak onay gerekir (varsayılan olarak açık)
+• Arşiv görünümüyle çalışır
+• Yaklaşık 20 arayüz dili
+
+YAYGIN KULLANIMLAR
+
+• Eski veya ikincil bir hesaptaki tüm fotoğrafları silmek
+• Binlerce eski fotoğraf ve videoyu silerek depolama alanı açmak
+• Paylaşılan veya test hesabını devretmeden önce boşaltmak
+• Web arayüzünün elle seçmek için çok yavaş olduğu büyük grupları kaldırmak
+
+GİZLİLİK
+
+• Ağ isteği yok. Uzantı, bizimki dahil hiçbir sunucuyla iletişim kurmaz — zaten yok.
+• Analiz yok, telemetri yok, yerel depolama yok, hesap yok.
+• Ana makine izni yok. Yalnızca photos.google.com'da ve yalnızca araç çubuğu düğmesine tıkladıktan sonra çalışır.
+• Hiçbir şey toplanmaz, satılmaz veya iletilmez.
+
+GÜVENLİK
+
+• Silinenler yok olmaz, Çöp Kutusu'na gider — 30 gün boyunca geri alınabilir
+• Uzantı Çöp Kutusu sayfasında çalışmayı reddeder, çünkü orada silme kalıcıdır
+• Yalnızca kullandığınız sekmede oturum açmış hesap üzerinde işlem yapar
+
+NOT
+
+Bu resmi olmayan bir araçtır. Google ile bağlantılı, Google tarafından onaylanmış veya desteklenmiş değildir. "Google Fotoğraflar", Google LLC'nin ticari markasıdır ve yalnızca uzantının neyle çalıştığını açıklamak için kullanılır.
+```
+
+### Indonesian (`id`)
+
+```
+Bulk Delete Google Photos adalah alat kecil yang berjalan secara lokal untuk mengosongkan pustaka Google Foto dengan cepat: memilih dan menghapus ribuan foto dan video secara massal per batch, karena antarmuka Google sendiri membuat pemilihan sebanyak itu secara manual menjadi tidak praktis.
+
+Google Foto tidak punya tombol "pilih semua" atau "hapus semua", dan menyeret untuk memilih puluhan ribu item itu lambat dan rawan kesalahan. Ekstensi ini menambahkan panel samping di photos.google.com yang mengotomatiskan klik yang biasanya Anda lakukan sendiri: pilih satu batch, tekan Hapus, konfirmasi, tunggu grid dimuat ulang, lalu ulangi — sehingga Anda bisa mengosongkan akun atau membebaskan penyimpanan tanpa mengeklik seharian.
+
+FITUR
+
+• Hapus massal per batch: pilih semua yang terlihat atau ukuran batch tetap, dan grid menggulir untuk terus memuat
+• Mode uji coba: memilih dan menghitung tanpa menghapus, agar bisa diverifikasi sebelum dijalankan
+• Progres langsung: jumlah terhapus, nomor batch, fase, dan waktu berjalan
+• Tombol stop yang langsung berhenti
+• Batas maksimum opsional per proses
+• Konfirmasi ketik wajib sebelum menghapus (aktif secara default)
+• Berfungsi dengan tampilan Arsip
+• Sekitar 20 bahasa antarmuka
+
+PENGGUNAAN UMUM
+
+• Menghapus semua foto dari akun lama atau akun kedua
+• Membebaskan penyimpanan dengan menghapus ribuan foto dan video lama
+• Mengosongkan akun bersama atau akun uji sebelum diserahkan
+• Menghapus batch besar yang terlalu lambat dipilih manual di antarmuka web
+
+PRIVASI
+
+• Tanpa permintaan jaringan. Ekstensi tidak pernah menghubungi server mana pun, termasuk milik kami — memang tidak ada.
+• Tanpa analitik, tanpa telemetri, tanpa penyimpanan lokal, tanpa akun.
+• Tanpa izin host. Hanya berjalan di photos.google.com, dan hanya setelah Anda mengeklik tombol toolbar.
+• Tidak ada yang dikumpulkan, dijual, atau dikirim.
+
+KEAMANAN
+
+• Penghapusan masuk ke Sampah, bukan lenyap — dapat dipulihkan selama 30 hari
+• Ekstensi menolak berjalan di halaman Sampah, karena penghapusan di sana bersifat permanen
+• Hanya bekerja pada akun yang sudah login di tab yang Anda gunakan
+
+CATATAN
+
+Ini alat tidak resmi. Tidak berafiliasi, didukung, atau disponsori oleh Google. "Google Foto" adalah merek dagang Google LLC, digunakan hanya untuk menjelaskan ekstensi ini bekerja dengan apa.
 ```
