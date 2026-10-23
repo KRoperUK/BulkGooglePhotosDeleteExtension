@@ -12,40 +12,47 @@ Paste-ready values for each field in the Developer Dashboard.
 Bulk Delete Google Photos
 ```
 
-**Summary** (from package)
+**Summary** (from package — 132-char limit; this is the main text shown in search results and category pages, so the primary keywords lead)
 
 ```
-Select and delete your own Google Photos in batches. Dry run, stop control, no limits, no network requests.
+Mass delete Google Photos in batches to free up storage. Dry-run preview, typed confirm, stop control, no limits, no network.
 ```
 
 **Description**
 
 ```
-Bulk Delete Google Photos is a small, local tool for clearing out a Google Photos library in bulk, because Google's own interface makes selecting tens of thousands of photos impractical.
+Bulk Delete Google Photos is a small, local tool for clearing out a Google Photos library fast — mass-selecting and deleting thousands of photos and videos in batches, because Google's own interface makes it impractical to select that many by hand.
 
-Google Photos has no "delete everything" button. This extension adds a side panel to photos.google.com that automates the exact clicks you would otherwise make by hand: select a batch, press Delete, confirm, wait for the grid to refresh, and repeat.
+Google Photos has no "select all" or "delete everything" button, and dragging to select tens of thousands of items is slow and error-prone. This extension adds a side panel to photos.google.com that automates the exact clicks you would otherwise make yourself: select a batch, press Delete, confirm, wait for the grid to reload, and repeat — so you can empty an account, clear space, or free up storage without clicking all day.
 
 FEATURES
 
-• Dry run mode - selects and counts without deleting, so you can verify it works before committing
-• Select everything in view, or a fixed batch size (it scrolls the grid to keep loading more)
-• Live progress showing deleted count, batch number and elapsed time
+• Bulk / mass delete in batches — select everything in view or a fixed batch size, and it scrolls the grid to keep loading more
+• Dry run mode — selects and counts without deleting, so you can verify it works before committing
+• Live progress — deleted count, batch number, current phase and elapsed time
 • Stop button that halts immediately
 • Optional hard cap on how many items a single run may delete
-• Typed confirmation required before deleting, on by default
-• Roughly 20 interface languages supported
+• Typed confirmation required before anything is deleted (on by default)
 • Works with the Archive view
+• Roughly 20 interface languages supported
+
+COMMON USES
+
+• Delete all Google Photos from an old or secondary account
+• Clear out thousands of old photos and videos to free up Google storage
+• Empty a shared or test account before handing it on
+• Remove large batches the web UI is too slow to select manually
 
 PRIVACY
 
-• No network requests. The extension never contacts any server, including ours - there isn't one.
+• No network requests. The extension never contacts any server, including ours — there isn't one.
 • No analytics, no telemetry, no local storage, no accounts.
 • No host permissions. It can only run on photos.google.com, and only after you click the toolbar button.
 • Nothing is collected, sold or transmitted.
 
 SAFETY
 
-• Deletions go to the Bin, not oblivion - recoverable for 30 days
+• Deletions go to the Bin, not oblivion — recoverable for 30 days
 • The extension refuses to run on the Bin page, because deleting there is permanent
 • It only ever acts on the account already signed in to the tab you are using
 
@@ -53,6 +60,8 @@ NOTE
 
 This is an unofficial tool. It is not affiliated with, endorsed by, or sponsored by Google. "Google Photos" is a trademark of Google LLC, used only to describe what the extension works with.
 ```
+
+> SEO notes (for the maintainer — not pasted into the dashboard): the summary leads with "Mass delete Google Photos … free up storage", the two phrases users most often search. The description's first sentence repeats the core terms (bulk/mass delete, thousands of photos and videos) because the opening ~25 words carry the most weight in store search, and the COMMON USES block covers long-tail queries ("delete all Google Photos from an old account", "free up Google storage") in natural prose rather than a keyword list, which the store's listing guidance warns against. Do not keyword-stuff the title — Google's guidance explicitly penalises that; the title already *is* the primary keyword.
 
 **Category:** `Productivity` (choose `Tools` as the subcategory if the dashboard offers one)
 
