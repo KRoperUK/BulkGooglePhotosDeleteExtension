@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1280px; height: 800px; overflow: hidden;
+    font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .app { display: flex; height: 100%; }
+
+  /* ---------- Google Photos (light) ---------- */
+  .photos { flex: 1; min-width: 0; background: #f1f3f4; display: flex; flex-direction: column; }
+  .topbar { height: 64px; display: flex; align-items: center; gap: 22px; padding: 0 24px;
+    background: #fff; border-bottom: 1px solid #e0e0e0; flex: 0 0 auto; }
+  .logo { font-size: 20px; color: #5f6368; font-weight: 500; }
+  .nav { font-size: 14px; color: #5f6368; }
+  .nav.active { color: #1a73e8; }
+  .spacer { flex: 1; }
+  .avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg,#c58af9,#8ab4f8); }
+  .grid { padding: 16px 18px; display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px;
+    overflow: hidden; align-content: start; }
+  .tile { aspect-ratio: 1/1; border-radius: 3px; background: linear-gradient(140deg,#cfd8dc,#b0bec5); }
+  .tile:nth-child(3n) { background: linear-gradient(140deg,#c5cae9,#9fa8da); }
+  .tile:nth-child(4n) { background: linear-gradient(140deg,#d7ccc8,#bcaaa4); }
+  .tile:nth-child(5n) { background: linear-gradient(140deg,#b2dfdb,#80cbc4); }
+  .tile:nth-child(7n) { background: linear-gradient(140deg,#ffe0b2,#ffcc80); }
+
+  /* ---------- side panel (dark) ---------- */
+  .side { width: 360px; flex: 0 0 360px; background: #1f2023; color: #e8eaed;
+    border-left: 1px solid #3c4043; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+  .side h1 { font-size: 14px; font-weight: 600; letter-spacing: .2px; }
+  .conn { display: flex; align-items: center; gap: 7px; font-size: 11px; color: #9aa0a6; margin-top: 3px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #81c995; }
+  .progress { background: #26282c; border: 1px solid #3c4043; border-radius: 10px; padding: 12px; }
+  .phase { color: #9aa0a6; font-size: 12px; min-height: 17px; margin-bottom: 6px; }
+  .big { font-size: 28px; font-weight: 700; color: #8ab4f8; line-height: 1.1; }
+  .big small { font-size: 12px; font-weight: 500; color: #9aa0a6; margin-left: 5px; }
+  .bar-wrap { height: 7px; background: #121316; border-radius: 999px; overflow: hidden; margin: 12px 0 7px; }
+  .bar { height: 100%; width: 34%; background: #8ab4f8; border-radius: 999px; }
+  .meta { display: flex; justify-content: space-between; color: #9aa0a6; font-size: 11px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .box { width: 82px; background: #121316; border: 1px solid #3c4043; border-radius: 6px;
+    padding: 4px 6px; text-align: left; }
+  .hint { color: #9aa0a6; font-size: 11px; margin-top: -6px; }
+  .cb { width: 15px; height: 15px; border-radius: 3px; background: #8ab4f8; position: relative; }
+  .cb::after { content: ""; position: absolute; left: 4px; top: 1px; width: 5px; height: 9px;
+    border: solid #202124; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  .buttons { display: flex; gap: 8px; }
+  .btn { flex: 1; border-radius: 7px; padding: 9px 10px; font-weight: 600; text-align: center; }
+  .btn.primary { background: #3c4043; color: #80868b; }
+  .btn.stop { background: #5f6368; color: #e8eaed; }
+  .btn.grey { background: #3c4043; color: #e8eaed; }
+  .log { flex: 1; overflow: hidden; background: #121316; border-radius: 8px; padding: 8px;
+    font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color: #bdc1c6; }
+  .log div { white-space: pre-wrap; word-break: break-word; }
+  .warn { color: #f28b82; font-size: 11px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="photos">
+    <div class="topbar">
+      <div class="logo">Photos</div>
+      <div class="nav active">Photos</div>
+      <div class="nav">Albums</div>
+      <div class="nav">Archive</div>
+      <div class="spacer"></div>
+      <div class="avatar"></div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <aside class="side">
+    <div>
+      <h1>Bulk Delete Google Photos</h1>
+      <div class="conn"><span class="dot"></span>Connected to Google Photos</div>
+    </div>
+
+    <div class="progress">
+      <div class="phase">Deleting 50…</div>
+      <div class="big">1,247<small>deleted</small></div>
+      <div class="bar-wrap"><div class="bar"></div></div>
+      <div class="meta"><span>Batch 25</span><span>1m 42s</span></div>
+    </div>
+
+    <div class="row">Batch size <div class="box">50</div></div>
+    <div class="hint">0 = select everything in view, else this many per pass</div>
+    <div class="row">Max this run <div class="box">0</div></div>
+    <div class="hint">0 = unlimited</div>
+    <div class="row">Delay (ms) <div class="box">5</div></div>
+    <div class="row">Dry run (select only) <div class="cb"></div></div>
+    <div class="row">Confirm before deleting <div class="cb"></div></div>
+
+    <div class="buttons">
+      <div class="btn primary">Start</div>
+      <div class="btn stop">Stop</div>
+    </div>
+    <div class="buttons"><div class="btn grey">Diagnose</div></div>
+
+    <div class="log">
+      <div>[00:54:18] Batch 24: deleted 50. Total: 1,200</div>
+      <div>[00:54:12] Clicked 50, confirmed 50 of 50 requested (toolbar says 50)</div>
+      <div>[00:54:09] Waiting for the grid to refresh after the delete…</div>
+      <div>[00:54:03] Batch 23: deleted 50. Total: 1,150</div>
+      <div>[00:53:57] Clicked 50, confirmed 49 of 50 requested (toolbar says 50)</div>
+      <div>[00:53:51] Batch 22: deleted 50. Total: 1,100</div>
+      <div>[00:53:44] Started. batch=50 max=unlimited dryRun=false</div>
+    </div>
+
+    <div class="warn">Deletes go to Bin, not permanently. Empty the Bin to free storage.</div>
+  </aside>
+</div>
+<script>
+  const grid = document.getElementById('grid');
+  for (let i = 0; i < 56; i++) grid.appendChild(Object.assign(document.createElement('div'), { className: 'tile' }));
+</script>
+</body>
+</html>
