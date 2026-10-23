@@ -32,6 +32,9 @@ jobs:
           done
           echo "icons ok"
 
+      - name: Validate localization bundle
+        run: node tools/validate-locales.mjs
+
   test:
     runs-on: ubuntu-latest
     steps:

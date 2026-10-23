@@ -1,0 +1,10 @@
+{
+  "extName": {
+    "message": "Bulk Delete Google Photos",
+    "description": "Extension name shown in the toolbar, chrome://extensions and the Chrome Web Store title."
+  },
+  "extDesc": {
+    "message": "Mass delete Google Photos in batches to free up storage. Dry-run preview, typed confirm, stop control, no limits, no network.",
+    "description": "Store summary (<=132 chars) and extension-management blurb. Leads with the primary search intent."
+  }
+}
