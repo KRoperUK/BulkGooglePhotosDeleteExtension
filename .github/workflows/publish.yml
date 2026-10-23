@@ -22,6 +22,8 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Resolve tag
         id: tag
@@ -78,6 +80,27 @@ jobs:
           mkdir -p dist
           zip -r dist/extension.zip manifest.json content.js background.js sidepanel.html sidepanel.js icons -x '*.DS_Store'
           unzip -l dist/extension.zip
+
+      # Assets are attached before the store upload so a release still carries
+      # them when publishing is blocked, e.g. while a previous version is in review.
+      - name: Assemble release assets
+        run: |
+          set -euo pipefail
+          version=$(node -p 'require("./manifest.json").version')
+          cp dist/extension.zip "dist/bulk-delete-google-photos-${version}.zip"
+          git archive --format=zip \
+            --prefix="bulk-delete-google-photos-${version}/" \
+            -o "dist/bulk-delete-google-photos-${version}-source.zip" HEAD
+          (cd dist && sha256sum *.zip > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          ls -lh dist
+
+      - name: Attach assets to the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release upload "$TAG" dist/*.zip dist/SHA256SUMS.txt --clobber
 
       - name: Upload and publish to Chrome Web Store
         uses: mnao305/chrome-extension-upload@f549d5d654694a7722d6abfa64c97409ad5e64c1 # v7.0.0
