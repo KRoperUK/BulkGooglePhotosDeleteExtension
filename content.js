@@ -266,6 +266,39 @@
     return null;
   }
 
+  // Chrome throttles timers in background tabs, which stalls a run. Rather than
+  // pressing on throttled (or sleeping a fixed guess), pause until the tab is
+  // foregrounded again and tell the panel so the user sees why nothing moves.
+  async function waitForVisible() {
+    if (!document.hidden) return;
+
+    log('Tab is in the background — Chrome throttles timers here. Pausing until you return to this tab.');
+    setStatus('Paused — bring this tab to the foreground');
+    updateModal({ phase: 'Paused — bring this tab to the foreground', paused: true });
+
+    await new Promise((resolve) => {
+      const onVisible = () => {
+        if (document.hidden || state.stop) return;
+        document.removeEventListener('visibilitychange', onVisible);
+        resolve();
+      };
+      document.addEventListener('visibilitychange', onVisible);
+      // state.stop can be set while hidden; poll so a Stop during pause unblocks.
+      const poll = setInterval(() => {
+        if (!document.hidden || state.stop) {
+          clearInterval(poll);
+          document.removeEventListener('visibilitychange', onVisible);
+          resolve();
+        }
+      }, 500);
+    });
+
+    if (!state.stop) {
+      log('Tab visible again — resuming.');
+      updateModal({ phase: 'Resuming…', paused: false });
+    }
+  }
+
   // ---------- core actions ----------
 
   const state = {
@@ -753,8 +786,7 @@
           break;
         }
 
-        if (document.hidden) log('Tab hidden — pausing 5s so throttling does not stall the run.');
-        if (document.hidden) await sleep(5000);
+        if (document.hidden) await waitForVisible();
       }
     } catch (err) {
       log(`Error: ${err.message}`);
@@ -806,8 +838,8 @@
     emit({ status: text });
   }
 
-  function updateModal({ phase, deleted, batch, percent }) {
-    emit({ progress: { phase, deleted, batch, percent } });
+  function updateModal({ phase, deleted, batch, percent, paused }) {
+    emit({ progress: { phase, deleted, batch, percent, paused } });
   }
 
   function showModal() {

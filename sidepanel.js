@@ -63,6 +63,11 @@ function renderProgress(p) {
   if (p.phase !== undefined && p.phase !== null) ui.phase.textContent = p.phase;
   if (p.deleted !== undefined && p.deleted !== null) ui.count.textContent = Number(p.deleted).toLocaleString();
   if (p.batch !== undefined && p.batch !== null) ui.batch.textContent = `Batch ${p.batch}`;
+  if (p.paused === true) {
+    setConnection('Paused — bring the Photos tab to the foreground', 'warn');
+  } else if (p.paused === false && running) {
+    setConnection('Connected to Google Photos', 'ok');
+  }
   if (p.percent === null || p.percent === undefined) {
     ui.bar.classList.add('indet');
     ui.bar.style.width = '';
