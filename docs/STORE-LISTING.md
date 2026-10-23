@@ -107,10 +107,24 @@ https://kroperuk.github.io/BulkGooglePhotosDeleteExtension/privacy.html
 Bulk-select and delete photos and videos from the signed-in user's own Google Photos library.
 ```
 
-**Permission justification**
+**Permission justifications** — the dashboard asks for one per permission.
+
+`activeTab`:
 
 ```
-No host permissions are requested. activeTab grants access to the current tab only when the user clicks the toolbar button, sidePanel lets the toolbar button open the extension's own panel, and scripting injects the extension's own bundled content.js into that tab. content.js refuses to run unless the hostname is exactly photos.google.com.
+The extension's only function is to automate the user's own Google Photos library. activeTab grants access to the current tab only at the moment the user clicks the extension's toolbar button - Chrome grants it as a direct result of that user action. It is used so the extension can read the photo grid it is about to operate on and perform the selection and deletion the user explicitly requested. No access is retained: the grant ends when the user navigates away, and no host permissions are requested, so the extension cannot reach any site the user has not invoked it on. Nothing is read from any other tab, and no data leaves the page.
+```
+
+`scripting`:
+
+```
+Needed to inject the extension's own bundled content.js into the tab the user has just activated. Google Photos offers no public API for bulk deletion, so the only way to fulfil the single purpose is to drive the web interface the user is already looking at. The injected script ships inside the installed package - nothing is downloaded or evaluated at runtime. It is injected only after the user clicks the toolbar button, and it returns immediately unless the hostname is exactly photos.google.com, so it cannot run on any other site.
+```
+
+`sidePanel`:
+
+```
+Used to display the extension's own control panel - batch size, dry-run toggle, start/stop and progress - in Chrome's side panel. The panel is an extension page shipped in the package. Keeping the controls in the side panel means they do not cover the photo grid the user is working in, and progress stays visible while a run continues. It opens only when the user clicks the toolbar button. No page content is rendered in the panel, and nothing is stored or transmitted.
 ```
 
 **Are you using remote code?** No — all logic ships inside the package. Nothing is fetched or evaluated at runtime.
