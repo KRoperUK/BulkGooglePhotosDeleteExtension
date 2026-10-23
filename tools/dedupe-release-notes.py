@@ -24,7 +24,7 @@ ITEM = re.compile(
 )
 
 
-def process(text):
+def dedupe_section(text):
     lines = text.splitlines()
 
     links_by_title = {}
@@ -52,6 +52,13 @@ def process(text):
         out.append(f"* {title} ({', '.join(links)})")
 
     return "\n".join(out) + "\n"
+
+
+def process(text):
+    # Each version has its own section, so the same message may legitimately
+    # appear once per version. Collapse only within a section.
+    sections = re.split(r"(?m)^(?=## )", text)
+    return "".join(dedupe_section(section) for section in sections if section)
 
 
 def main():
