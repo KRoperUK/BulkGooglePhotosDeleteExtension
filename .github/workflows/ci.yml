@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Release Please opens its PR with GITHUB_TOKEN, so no workflow runs for it and
+  # the required check never reports. Dispatch on that branch when cutting a
+  # release to give the PR the validate check it needs.
+  workflow_dispatch:
 
 permissions:
   contents: read

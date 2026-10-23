@@ -400,10 +400,13 @@
     if (batchSize === 0) return selectAllInView();
 
     let selected = 0;
+    let attempted = 0;
     let container = null;
     let idleRounds = 0;
 
-    while (!state.stop && selected < batchSize) {
+    // Cap on clicks performed, not on clicks that verified. The snapshot can
+    // hold 70-100 tiles, so trusting a lagging verified count overshoots badly.
+    while (!state.stop && attempted < batchSize) {
       const tiles = findTileCheckboxes();
       if (!container && tiles.length) container = scrollContainer(tiles[0]);
 
@@ -444,33 +447,34 @@
       let aborted = false;
 
       for (const tile of unselected) {
-        if (state.stop || selected >= batchSize) break;
+        if (state.stop || attempted >= batchSize) break;
         if (!tile.isConnected) continue;
         // Re-check at click time: the grid recycles nodes as it loads more.
         if (tile.getAttribute('aria-checked') === 'true') continue;
 
+        attempted++;
         const ok = await selectOne(tile);
-        if (!ok) {
+        if (ok) {
+          selected++;
+        } else {
           failed++;
           if (failed > 20) {
             log('Too many tiles refused selection — stopping this batch.');
             aborted = true;
             break;
           }
-        } else {
-          selected++;
         }
 
-        if (selected % 5 === 0) {
-          setStatus(`Selecting… ${selected}`);
-          updateModal({ phase: `Selecting ${selected} / ${batchSize}`, percent: (selected / batchSize) * 100 });
+        if (attempted % 5 === 0) {
+          setStatus(`Selecting… ${attempted}`);
+          updateModal({ phase: `Selecting ${attempted} / ${batchSize}`, percent: (attempted / batchSize) * 100 });
         }
         await sleep(delay);
       }
 
       if (aborted) break;
 
-      if (selected >= batchSize) break;
+      if (attempted >= batchSize) break;
 
       // Keep feeding the virtualized grid so the next window of tiles renders.
       if (!scrollStep(container)) {
@@ -481,8 +485,9 @@
       }
     }
 
-    log(`Selected ${selected} of ${batchSize} requested`);
-    return selectionCount();
+    const counted = selectionCount();
+    log(`Clicked ${attempted}, confirmed ${selected} of ${batchSize} requested (toolbar says ${counted})`);
+    return counted || selected;
   }
 
   async function deselectAll() {
