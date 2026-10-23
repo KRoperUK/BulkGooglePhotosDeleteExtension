@@ -4,15 +4,21 @@ Item ID: `laeijompklaebgbmhoehbefjmfcaohnf`
 
 Paste-ready values for each field in the Developer Dashboard.
 
+> **Localization:** the title and summary now come from the package's
+> `_locales/<lang>/messages.json` (`extName` / `extDesc`), so they ship and update
+> via releases. Translations of all listing copy — including the full descriptions,
+> which the API cannot set and must be pasted per language — are in
+> [STORE-LISTING-i18n.md](STORE-LISTING-i18n.md).
+
 ## Product details
 
-**Title** (from package — change in `manifest.json` and re-upload to alter)
+**Title** (`extName` in `_locales/en/messages.json` — edit there, not in `manifest.json`)
 
 ```
 Bulk Delete Google Photos
 ```
 
-**Summary** (from package — 132-char limit; this is the main text shown in search results and category pages, so the primary keywords lead)
+**Summary** (`extDesc` in `_locales/en/messages.json` — 132-char limit; the main text shown in search results and category pages, so the primary keywords lead)
 
 ```
 Mass delete Google Photos in batches to free up storage. Dry-run preview, typed confirm, stop control, no limits, no network.
