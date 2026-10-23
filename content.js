@@ -115,6 +115,14 @@
     return [];
   }
 
+  function photoHrefs() {
+    return new Set(
+      [...document.querySelectorAll('a[href*="/photo/"]')]
+        .map((a) => a.getAttribute('href'))
+        .filter(Boolean)
+    );
+  }
+
   function selectionCount() {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     let node;
@@ -594,6 +602,7 @@
 
         setStatus(`Deleting ${selected}…`);
         updateModal({ phase: `Deleting ${selected}…`, percent: null });
+        const before = photoHrefs();
         const ok = await deleteSelection();
         if (!ok) break;
 
@@ -611,6 +620,14 @@
 
         const settled = await settleGrid(20000);
         if (!settled) log('Grid still has no tiles after waiting; the next pass will retry.');
+
+        // The selection count only proves what we clicked. If every photo that
+        // was on screen is still there, the delete did not actually apply.
+        const after = photoHrefs();
+        if (before.size && after.size && [...before].every((href) => after.has(href))) {
+          log('Warning: the visible photos are unchanged after deleting — the delete may not have applied. Stopping.');
+          break;
+        }
 
         if (document.hidden) log('Tab hidden — pausing 5s so throttling does not stall the run.');
         if (document.hidden) await sleep(5000);
@@ -680,6 +697,16 @@
         .log div { white-space:pre-wrap; word-break:break-word; }
         .warn { color:#f28b82; font-size:11px; }
 
+        .bubble { flex:0 0 auto; padding:0; width:52px; height:52px; border-radius:50%; border:0;
+                  background:#1f2023; box-shadow:0 6px 20px rgba(0,0,0,.45); cursor:pointer;
+                  display:grid; place-items:center; }
+        .bubble:hover { background:#2a2b2f; }
+        .bubble img { width:34px; height:34px; display:block; }
+        .bubble[hidden], .panel[hidden] { display:none; }
+        .icon-btn { flex:0 0 auto; padding:0; width:24px; height:24px; border:0; border-radius:4px;
+                    background:transparent; color:#9aa0a6; font-size:16px; line-height:1; cursor:pointer; }
+        .icon-btn:hover { background:#3c4043; color:#e8eaed; }
+
         .overlay { position:fixed; inset:0; display:none; align-items:center; justify-content:center;
                    background:rgba(0,0,0,.55); backdrop-filter:blur(2px); }
         .overlay.show { display:flex; }
@@ -698,8 +725,15 @@
         .card .buttons { margin-top:16px; }
         #modalStop { background:#5f6368; color:#e8eaed; }
       </style>
-      <div class="panel">
-        <div class="head"><b>Bulk Delete Google Photos</b></div>
+      <button class="bubble" id="bubble" title="Bulk Delete Google Photos">
+        <img src="${chrome.runtime.getURL('icons/icon128.png')}" alt="">
+      </button>
+
+      <div class="panel" id="panel" hidden>
+        <div class="head">
+          <b>Bulk Delete Google Photos</b>
+          <button class="icon-btn" id="minimize" title="Minimise">&minus;</button>
+        </div>
         <div class="body">
           <label class="row">Batch size <input type="number" id="batchSize" value="50" min="0" step="10"></label>
           <span class="hint">0 = select everything in view, else this many per pass</span>
@@ -754,6 +788,18 @@
     ui.modalBatch = root.querySelector('#modalBatch');
     ui.modalElapsed = root.querySelector('#modalElapsed');
     ui.modalStop = root.querySelector('#modalStop');
+    ui.bubble = root.querySelector('#bubble');
+    ui.panelEl = root.querySelector('#panel');
+    ui.minimizeBtn = root.querySelector('#minimize');
+
+    ui.bubble.addEventListener('click', () => {
+      ui.panelEl.hidden = false;
+      ui.bubble.hidden = true;
+    });
+    ui.minimizeBtn.addEventListener('click', () => {
+      ui.panelEl.hidden = true;
+      ui.bubble.hidden = false;
+    });
 
     ui.startBtn.addEventListener('click', () => {
       if (window.location.pathname.startsWith('/trash')) {
