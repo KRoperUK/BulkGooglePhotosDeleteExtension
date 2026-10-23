@@ -406,6 +406,49 @@
     return findTileCheckboxes().length > 0;
   }
 
+  async function waitForGridChange(before, timeout = 30000) {
+    if (!before.size) {
+      await settleGrid(10000);
+      return true;
+    }
+
+    const start = Date.now();
+    let announced = false;
+    let nudged = false;
+
+    while (Date.now() - start < timeout) {
+      if (state.stop) return false;
+
+      const now = photoHrefs();
+      const changed = now.size === 0 || [...before].some((href) => !now.has(href));
+
+      if (changed) {
+        // Let the replacement tiles settle before clicking anything.
+        await settleGrid(10000);
+        return true;
+      }
+
+      if (!announced) {
+        log('Waiting for the grid to refresh after the delete…');
+        announced = true;
+      }
+
+      // A virtualised grid can hold stale nodes indefinitely until it scrolls.
+      if (!nudged && Date.now() - start > 10000) {
+        const tile = findTileCheckboxes()[0];
+        const container = tile ? scrollContainer(tile) : null;
+        if (container) {
+          log('Grid has not refreshed yet — nudging it to re-render.');
+          scrollStep(container);
+        }
+        nudged = true;
+      }
+
+      await sleep(400);
+    }
+    return false;
+  }
+
   async function selectBatch(batchSize, delay) {
     if (batchSize === 0) return selectAllInView();
 
@@ -426,7 +469,7 @@
         const refreshed = await waitFor(() => {
           const t = findTileCheckboxes();
           return t.length ? t : null;
-        }, 15000);
+        }, 25000);
 
         if (!refreshed) {
           idleRounds++;
@@ -616,16 +659,13 @@
         });
         log(`Batch ${state.batches}: deleted ${selected}. Total: ${state.deleted}`);
 
-        await sleep(1200);
+        await sleep(800);
 
-        const settled = await settleGrid(20000);
-        if (!settled) log('Grid still has no tiles after waiting; the next pass will retry.');
-
-        // The selection count only proves what we clicked. If every photo that
-        // was on screen is still there, the delete did not actually apply.
-        const after = photoHrefs();
-        if (before.size && after.size && [...before].every((href) => after.has(href))) {
-          log('Warning: the visible photos are unchanged after deleting — the delete may not have applied. Stopping.');
+        // Wait on the photos themselves, not on a tile count: a stale grid still
+        // has tiles, and that is what let the next pass run too early.
+        const changed = await waitForGridChange(before, 30000);
+        if (!changed) {
+          log('Warning: the visible photos did not change after deleting. The delete may not have applied, or the grid is stuck. Stopping.');
           break;
         }
 
