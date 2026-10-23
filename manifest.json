@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Bulk Delete Google Photos",
   "version": "1.4.0",
-  "description": "Select and delete your own Google Photos in batches. Dry run, stop control, no limits, no network requests.",
+  "description": "Mass delete Google Photos in batches to free up storage. Dry-run preview, typed confirm, stop control, no limits, no network.",
   "homepage_url": "https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension",
   "minimum_chrome_version": "114",
   "icons": {
