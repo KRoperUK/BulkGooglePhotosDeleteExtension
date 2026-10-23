@@ -13,7 +13,7 @@ A local Chrome extension that selects and deletes your own Google Photos in batc
 3. Click **Load unpacked** and select this folder
 4. Open `https://photos.google.com`
 
-A panel appears bottom-right.
+A round button appears bottom-right. Click it to open the control panel; the `−` in the panel header collapses it back to the button.
 
 ## Use
 
