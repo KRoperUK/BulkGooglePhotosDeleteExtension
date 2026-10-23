@@ -701,7 +701,7 @@
                   background:#1f2023; box-shadow:0 6px 20px rgba(0,0,0,.45); cursor:pointer;
                   display:grid; place-items:center; }
         .bubble:hover { background:#2a2b2f; }
-        .bubble img { width:34px; height:34px; display:block; }
+        .bubble img, .bubble svg { width:34px; height:34px; display:block; }
         .bubble[hidden], .panel[hidden] { display:none; }
         .icon-btn { flex:0 0 auto; padding:0; width:24px; height:24px; border:0; border-radius:4px;
                     background:transparent; color:#9aa0a6; font-size:16px; line-height:1; cursor:pointer; }
@@ -726,7 +726,14 @@
         #modalStop { background:#5f6368; color:#e8eaed; }
       </style>
       <button class="bubble" id="bubble" title="Bulk Delete Google Photos">
-        <img src="${chrome.runtime.getURL('icons/icon128.png')}" alt="">
+        <svg viewBox="0 0 128 128" width="34" height="34" aria-hidden="true">
+          <rect x="16" y="22" width="76" height="60" rx="10" fill="#2f4f96" opacity=".45" transform="rotate(-7 54 52)"/>
+          <rect x="24" y="32" width="76" height="60" rx="10" fill="#8ab4f8"/>
+          <circle cx="43" cy="50" r="6" fill="#ffffff" opacity=".95"/>
+          <path d="M28 86 L52 60 L68 76 L78 66 L96 86 Z" fill="#ffffff" opacity=".95"/>
+          <circle cx="95" cy="89" r="19" fill="#ef5350"/>
+          <rect x="86" y="85.5" width="18" height="7" rx="3.5" fill="#ffffff"/>
+        </svg>
       </button>
 
       <div class="panel" id="panel" hidden>
