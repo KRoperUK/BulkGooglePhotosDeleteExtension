@@ -1,0 +1,87 @@
+name: Bug report
+description: Something is broken or behaves incorrectly.
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Google changes its Photos DOM regularly, so
+        details about your browser and what the log pane showed are what make a
+        bug fixable.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What went wrong, and what did you expect instead?
+      placeholder: I set a batch of 50 but it deleted 83.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The exact sequence, including the options you set.
+      placeholder: |
+        1. Open photos.google.com
+        2. Click the toolbar icon
+        3. Set Batch size = 50, Dry run = on
+        4. Click Start
+    validations:
+      required: true
+
+  - type: input
+    id: batch-size
+    attributes:
+      label: Batch size
+      description: The "Batch size" value you set (0 = everything in view).
+      placeholder: "50"
+    validations:
+      required: false
+
+  - type: input
+    id: actual-count
+    attributes:
+      label: How many were actually selected / deleted?
+      description: Relevant for over/under-selection bugs — the number the panel or toolbar reported.
+      placeholder: "83"
+    validations:
+      required: false
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Log pane output
+      description: Copy the relevant lines from the side panel's log. The "Diagnose" button output is especially useful when a run reports 0.
+      render: text
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: Extension version
+      description: From chrome://extensions or manifest.json.
+      placeholder: "1.3.0"
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+      placeholder: "Chrome 141 on macOS 15"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: I was running on photos.google.com (not the Bin / trash page).
+          required: true
