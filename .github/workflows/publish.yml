@@ -74,6 +74,27 @@ jobs:
             exit 1
           fi
 
+      # Merge commits and their inner commits share a message, so Release Please
+      # lists each change twice. Collapse them to one line per message.
+      - name: Collapse duplicate entries in the release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ ! -f tools/dedupe-release-notes.py ]; then
+            echo "No dedupe script at this tag — skipping."
+            exit 0
+          fi
+          gh release view "$TAG" --json body --jq .body > /tmp/notes.md
+          python3 tools/dedupe-release-notes.py /tmp/notes.md > /tmp/notes-deduped.md
+          if cmp -s /tmp/notes.md /tmp/notes-deduped.md; then
+            echo "No duplicate entries."
+          else
+            gh release edit "$TAG" --notes-file /tmp/notes-deduped.md
+            echo "Collapsed duplicate entries."
+          fi
+
       - name: Build extension zip
         run: |
           set -euo pipefail
