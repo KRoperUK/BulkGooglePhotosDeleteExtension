@@ -3,7 +3,7 @@
 A local Chrome extension that selects and deletes your own Google Photos in batches. Same job as the paid Chrome Web Store extension, minus the payment gate, the 500/day limit, and the third-party host permission.
 
 - No network requests, no analytics, no storage, no payment provider.
-- `permissions: []` — it only runs as a content script on `photos.google.com`.
+- No host permissions. It declares three warning-free permissions — `activeTab` (acts on the Photos tab only when you click the toolbar icon), `scripting` (injects its own bundled script on demand) and `sidePanel` (opens the control panel beside the page). It cannot read or modify any other site.
 - Dry run enabled by default.
 
 ## Install
