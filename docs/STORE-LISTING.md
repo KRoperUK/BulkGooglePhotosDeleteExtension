@@ -119,12 +119,12 @@ No host permissions are requested. activeTab grants access to the current tab on
 
 ## Test instructions
 
-Reviewers must be able to exercise this without destroying a real photo library. This field is capped at 500 characters; the text below is 455.
+Reviewers must be able to exercise this without destroying a real photo library. This field is capped at 500 characters; the text below is 420.
 
 ```
 Automates the Google Photos web UI. Test without deleting:
 1. Install, pin the extension, open photos.google.com signed in.
-2. Click the toolbar icon. A round button appears bottom-right; click it to open the panel.
+2. Click the toolbar icon. The panel opens bottom-right.
 3. Leave "Dry run (select only)" ticked.
 4. Click Start: it selects photos, reports the count, then deselects. Nothing is deleted.
 5. Click Diagnose for selector details.

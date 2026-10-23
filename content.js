@@ -772,7 +772,7 @@
         .card .buttons { margin-top:16px; }
         #modalStop { background:#5f6368; color:#e8eaed; }
       </style>
-      <button class="bubble" id="bubble" title="Bulk Delete Google Photos">
+      <button class="bubble" id="bubble" title="Bulk Delete Google Photos" hidden>
         <svg viewBox="0 0 128 128" width="34" height="34" aria-hidden="true">
           <rect x="16" y="22" width="76" height="60" rx="10" fill="#2f4f96" opacity=".45" transform="rotate(-7 54 52)"/>
           <rect x="24" y="32" width="76" height="60" rx="10" fill="#8ab4f8"/>
@@ -783,7 +783,7 @@
         </svg>
       </button>
 
-      <div class="panel" id="panel" hidden>
+      <div class="panel" id="panel">
         <div class="head">
           <b>Bulk Delete Google Photos</b>
           <button class="icon-btn" id="minimize" title="Minimise">&minus;</button>
