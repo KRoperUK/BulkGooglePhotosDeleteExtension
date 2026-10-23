@@ -76,7 +76,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          zip -r dist/extension.zip manifest.json content.js icons -x '*.DS_Store'
+          zip -r dist/extension.zip manifest.json content.js background.js icons -x '*.DS_Store'
           unzip -l dist/extension.zip
 
       - name: Upload and publish to Chrome Web Store
