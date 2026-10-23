@@ -196,6 +196,7 @@
   async function waitFor(predicate, timeout = 8000, interval = 150) {
     const start = Date.now();
     while (Date.now() - start < timeout) {
+      if (state.stop) return null;
       const value = predicate();
       if (value) return value;
       await sleep(interval);
@@ -383,6 +384,7 @@
     let stable = 0;
 
     while (Date.now() - start < timeout) {
+      if (state.stop) return false;
       const count = findTileCheckboxes().length;
       if (count > 0 && count === lastCount) {
         stable++;
@@ -571,10 +573,22 @@
         }
 
         if (opts.dryRun) {
-          log(`Dry run: selected ${selected} item(s). Deselecting without deleting.`);
-          updateModal({ phase: `Dry run — selected ${selected}, not deleting`, percent: 100 });
+          log(`Dry run: selected ${selected} item(s). Checking the delete path without deleting.`);
+
+          const deleteBtn = findDeleteButton();
+          if (deleteBtn) {
+            log(`Dry run: Delete control found — "${label(deleteBtn).slice(0, 50) || '(unlabelled)'}"`);
+            log('Dry run: the confirm dialog is only reachable by clicking Delete, so it cannot be checked without deleting.');
+          } else {
+            log('Dry run: WARNING — no Delete control found while items are selected. A real run would stop at this point.');
+          }
+
           await deselectAll();
-          setStatus('Dry run complete');
+          updateModal({
+            phase: `Dry run — ${selected} selected, delete control ${deleteBtn ? 'found' : 'MISSING'}`,
+            percent: 100
+          });
+          setStatus(`Dry run complete — delete control ${deleteBtn ? 'found' : 'MISSING'}`);
           break;
         }
 
@@ -608,6 +622,15 @@
       state.running = false;
       ui.startBtn.disabled = false;
       ui.stopBtn.disabled = true;
+
+      // An aborted run (Stop, missing Delete button, failed confirmation) can
+      // leave a selection behind, and the next run would stack on top of it.
+      const leftover = selectionCount();
+      if (leftover > 0) {
+        log(`Clearing ${leftover} still-selected item(s) so the next run starts clean.`);
+        await deselectAll();
+      }
+
       setStatus(`Finished — ${state.deleted} deleted in ${state.batches} batch(es)`);
       log('Run stopped.');
       updateModal({
