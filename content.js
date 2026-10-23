@@ -495,6 +495,17 @@
       key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true, metaKey: meta
     }));
     await sleep(300);
+
+    if (selectionCount() === 0) return;
+
+    // Escape did not clear it — use the explicit "Deselect all" control.
+    const control = [...document.querySelectorAll('[role="checkbox"], button, [role="button"]')]
+      .find((el) => visible(el) && !el.closest('[role="dialog"]') && DESELECT_RE.test(label(el)));
+
+    if (control) {
+      control.click();
+      await sleep(400);
+    }
   }
 
   async function deleteSelection() {
@@ -533,6 +544,20 @@
     state.stop = false;
     state.deleted = 0;
     state.batches = 0;
+
+    // Never assume the library starts unselected. A run that died with the page
+    // (reload, extension reload, crash) leaves its selection behind, and the
+    // next batch would silently stack on top of it.
+    const carried = selectionCount();
+    if (carried > 0) {
+      log(`Clearing ${carried} item(s) still selected from an earlier run.`);
+      await deselectAll();
+      await sleep(400);
+      const stillSelected = selectionCount();
+      if (stillSelected > 0) {
+        log(`Warning: ${stillSelected} item(s) remained selected after clearing. Batch sizes may be larger than requested.`);
+      }
+    }
 
     showModal();
     updateModal({ phase: 'Starting…', deleted: 0, batch: 0, percent: null });
