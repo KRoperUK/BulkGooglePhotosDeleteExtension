@@ -1,5 +1,8 @@
 # Bulk Delete Google Photos
 
+[![CI](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/actions/workflows/ci.yml/badge.svg)](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/actions/workflows/codeql.yml/badge.svg)](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/actions/workflows/codeql.yml)
+
 A local Chrome extension that selects and deletes your own Google Photos in batches. Same job as the paid Chrome Web Store extension, minus the payment gate, the 500/day limit, and the third-party host permission.
 
 - No network requests, no analytics, no storage, no payment provider.
@@ -80,3 +83,22 @@ Every release carries:
 Assets are attached before the store upload, so a release still carries them when publishing is blocked (for example while a previous version is in review).
 
 No `.crx` is attached. Chrome blocks off-store CRX installs in most configurations, a self-signed CRX produces a different extension ID from the store listing, and Edge cannot use CRX at all — so it would be a confusing artefact rather than a useful one.
+
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and the change workflow, and [AGENTS.md](AGENTS.md) for conventions (Conventional Commits, the no-build verify loop, house style). Please follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+Before opening a PR:
+
+```sh
+npm ci
+npm run lint
+npm test
+```
+
+Report bugs and request features with the issue templates. Security issues go through the [security policy](SECURITY.md), not public issues.
+
+## License
+
+Released under the [MIT License](LICENSE).
+

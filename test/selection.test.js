@@ -163,7 +163,7 @@ test('aria-checked lag does not push the batch over its size (guards #29)', asyn
 });
 
 test('diagnose reports the toolbar selection count, not a stray page number', async () => {
-  const { window, sent, dispatch } = loadExtension({ gridSize: 10 });
+  const { window, dispatch } = loadExtension({ gridSize: 10 });
   const { document } = window;
 
   // A decoy elsewhere on the page that reads like a count. selectionCount must

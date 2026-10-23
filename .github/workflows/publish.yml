@@ -99,7 +99,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          zip -r dist/extension.zip manifest.json content.js background.js sidepanel.html sidepanel.js icons -x '*.DS_Store'
+          zip -r dist/extension.zip manifest.json content.js background.js sidepanel.html sidepanel.js icons LICENSE -x '*.DS_Store'
           unzip -l dist/extension.zip
 
       # Assets are attached before the store upload so a release still carries
