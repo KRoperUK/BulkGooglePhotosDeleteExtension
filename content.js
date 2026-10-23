@@ -377,6 +377,25 @@
     return container.scrollTop !== before;
   }
 
+  async function settleGrid(timeout = 15000) {
+    const start = Date.now();
+    let lastCount = -1;
+    let stable = 0;
+
+    while (Date.now() - start < timeout) {
+      const count = findTileCheckboxes().length;
+      if (count > 0 && count === lastCount) {
+        stable++;
+        if (stable >= 2) return true;
+      } else {
+        stable = 0;
+      }
+      lastCount = count;
+      await sleep(400);
+    }
+    return findTileCheckboxes().length > 0;
+  }
+
   async function selectBatch(batchSize, delay) {
     if (batchSize === 0) return selectAllInView();
 
@@ -388,12 +407,35 @@
       const tiles = findTileCheckboxes();
       if (!container && tiles.length) container = scrollContainer(tiles[0]);
 
+      // Nothing rendered: the grid is almost certainly still refreshing after
+      // a delete. Give it real time before deciding the library is empty.
+      if (!tiles.length) {
+        const refreshed = await waitFor(() => {
+          const t = findTileCheckboxes();
+          return t.length ? t : null;
+        }, 15000);
+
+        if (!refreshed) {
+          idleRounds++;
+          if (idleRounds > 2 || !scrollStep(container)) break;
+          await sleep(1000);
+        }
+        continue;
+      }
+
       const unselected = tiles.filter((el) => el.getAttribute('aria-checked') !== 'true');
 
+      // Everything on screen is already selected: load the next window.
       if (!unselected.length) {
-        idleRounds++;
-        if (idleRounds > 2 || !scrollStep(container)) break;
-        await sleep(900);
+        if (scrollStep(container)) {
+          await sleep(900);
+          continue;
+        }
+        const more = await waitFor(() => {
+          const t = findTileCheckboxes().filter((el) => el.getAttribute('aria-checked') !== 'true');
+          return t.length ? t : null;
+        }, 8000);
+        if (!more) break;
         continue;
       }
       idleRounds = 0;
@@ -506,7 +548,17 @@
           batch: state.batches + 1,
           percent: opts.maxTotal ? (state.deleted / opts.maxTotal) * 100 : null
         });
-        const selected = await selectBatch(batch, opts.delay);
+        let selected = await selectBatch(batch, opts.delay);
+
+        // A single empty pass after a delete is usually a refreshing grid, not
+        // the end of the library. Retry before declaring it empty.
+        for (let attempt = 1; !selected && !state.stop && attempt <= 2; attempt++) {
+          log(`Nothing selectable (attempt ${attempt}) — waiting for the grid to come back.`);
+          await sleep(3000);
+          const ready = await waitFor(() => (findTileCheckboxes().length ? true : null), 15000);
+          if (!ready) break;
+          selected = await selectBatch(batch, opts.delay);
+        }
 
         if (!selected) {
           log('No photos could be selected — library appears empty or selectors failed.');
@@ -536,10 +588,10 @@
         });
         log(`Batch ${state.batches}: deleted ${selected}. Total: ${state.deleted}`);
 
-        await sleep(2500);
+        await sleep(1200);
 
-        const after = await waitFor(() => findTileCheckboxes().length || selectionCount() === 0, 10000);
-        if (!after) log('Grid did not refresh as expected; continuing anyway.');
+        const settled = await settleGrid(20000);
+        if (!settled) log('Grid still has no tiles after waiting; the next pass will retry.');
 
         if (document.hidden) log('Tab hidden — pausing 5s so throttling does not stall the run.');
         if (document.hidden) await sleep(5000);
