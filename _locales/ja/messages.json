@@ -1,6 +1,6 @@
 {
   "extName": {
-    "message": "Google フォトを一括削除"
+    "message": "Bulk Delete Google Photos"
   },
   "extDesc": {
     "message": "Google フォトを一括削除して空き容量を確保。ドライラン（選択のみ）、入力確認、停止ボタン、上限なし、通信なし。"

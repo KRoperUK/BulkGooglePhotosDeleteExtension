@@ -1,6 +1,6 @@
 {
   "extName": {
-    "message": "Exclusão em massa do Google Fotos"
+    "message": "Bulk Delete Google Photos"
   },
   "extDesc": {
     "message": "Exclua fotos do Google Fotos em lote para liberar espaço. Prévia de teste, confirmação digitada, botão parar, sem limites."

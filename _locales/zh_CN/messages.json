@@ -1,6 +1,6 @@
 {
   "extName": {
-    "message": "批量删除 Google 相册"
+    "message": "Bulk Delete Google Photos"
   },
   "extDesc": {
     "message": "批量删除 Google 相册照片，释放存储空间。支持试运行预览、输入确认、停止按钮，无数量限制，无网络请求。"

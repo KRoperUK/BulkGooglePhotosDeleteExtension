@@ -1,6 +1,6 @@
 {
   "extName": {
-    "message": "Hapus Massal Google Foto"
+    "message": "Bulk Delete Google Photos"
   },
   "extDesc": {
     "message": "Hapus massal Google Foto per batch untuk mengosongkan penyimpanan. Mode uji coba, konfirmasi, tombol stop, tanpa batas, offline."

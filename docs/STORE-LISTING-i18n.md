@@ -11,7 +11,7 @@ So the two halves of this file are applied differently:
 | Field | Source | Updates via release? |
 |---|---|---|
 | **Summary** (≤132 chars) | package — `_locales/<lang>/messages.json` → `extDesc` | **Yes.** Ships in the zip; the store derives the localized summary from the package. |
-| **Title** | package — `extName` | **Yes**, same mechanism. |
+| **Title** | package — `extName` | **Yes**, same mechanism — but `extName` is the **same English brand name (`Bulk Delete Google Photos`) in every locale** (see note). |
 | **Full description** | Developer Dashboard, per language | **No.** Paste manually (Store listing → language selector). |
 | **Screenshots / promo tiles** | Developer Dashboard | No. |
 
@@ -43,18 +43,19 @@ here for review. Edit the `messages.json` files, not this table — CI
 | `uk` | Ukrainian | Масове видалення Google Фото партіями для звільнення місця. Пробний запуск, підтвердження, стоп, без лімітів, офлайн. |
 | `ar` | Arabic (RTL) | احذف صور Google بالجملة على دفعات لتوفير مساحة التخزين. تشغيل تجريبي، تأكيد، زر إيقاف، بلا حدود، بدون اتصال بالشبكة. |
 
-> Product-name note: Google localizes the product name itself — "Google Fotos"
-> (de/pt), "Google Foto" (it/id/nl¹), "Google 포토" (ko), "Google 相册" (zh),
-> "Google Фото" (ru), "Google Fotoğraflar" (tr), "Google Zdjęcia" (pl). The English
-> brand is kept where Google commonly leaves it in Latin script (es/fr/hi/ja).
-> Verify against the current in-product strings if you want exact parity.
+> Title / `extName` note: the **extension name is the same English string**
+> `Bulk Delete Google Photos` **in every locale** — only the summary (`extDesc`)
+> and the full description are localized. The Chrome Web Store’s automated review
+> rejects an uploaded package whose *name* uses another company’s trademark (here
+> “Google” + the Photos product name) in a way that implies affiliation, and it
+> polices the name field far more strictly than the description. The English name
+> was grandfathered from v1.4.0, so it ships cleanly, while the description still
+> carries the localized, trademark-descriptive copy under the “unofficial, not
+> affiliated” disclaimer. Do **not** reintroduce localized product names into
+> `extName`.
 >
-> ¹ Dutch uses the possessive "Google Foto's" for the plural.
->
-> ² Localized product names continue: "Google Фото" (uk), "صور Google" (ar).
-> Vietnamese and Thai keep "Google Photos". Arabic (`ar`) is right-to-left — Chrome
-> and the store render it RTL automatically from the `_locales/ar` bundle; no
-> manifest change is needed.
+> Arabic (`ar`) is right-to-left — Chrome and the store render it RTL automatically
+> from the `_locales/ar` bundle; no manifest change is needed.
 
 ---
 
