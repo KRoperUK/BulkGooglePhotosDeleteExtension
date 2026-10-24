@@ -1,6 +1,6 @@
 {
   "extName": {
-    "message": "Xóa hàng loạt Google Photos"
+    "message": "Bulk Delete Google Photos"
   },
   "extDesc": {
     "message": "Xóa hàng loạt Google Photos theo lô để giải phóng dung lượng. Chạy thử, xác nhận, nút dừng, không giới hạn, không mạng."

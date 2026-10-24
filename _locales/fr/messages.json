@@ -1,6 +1,6 @@
 {
   "extName": {
-    "message": "Suppression groupée de Google Photos"
+    "message": "Bulk Delete Google Photos"
   },
   "extDesc": {
     "message": "Supprimez des photos Google Photos en lot pour libérer de l'espace. Aperçu à blanc, confirmation, bouton stop, sans limite."

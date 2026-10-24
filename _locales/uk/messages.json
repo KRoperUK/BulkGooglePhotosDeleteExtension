@@ -1,6 +1,6 @@
 {
   "extName": {
-    "message": "Масове видалення Google Фото"
+    "message": "Bulk Delete Google Photos"
   },
   "extDesc": {
     "message": "Масове видалення Google Фото партіями для звільнення місця. Пробний запуск, підтвердження, стоп, без лімітів, офлайн."
