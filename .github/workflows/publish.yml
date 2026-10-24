@@ -124,6 +124,7 @@ jobs:
           gh release upload "$TAG" dist/*.zip dist/SHA256SUMS.txt --clobber
 
       - name: Upload and publish to Chrome Web Store
+        id: cws_upload
         uses: mnao305/chrome-extension-upload@f549d5d654694a7722d6abfa64c97409ad5e64c1 # v7.0.0
         with:
           file-path: dist/extension.zip
@@ -133,6 +134,48 @@ jobs:
           client-secret: ${{ secrets.CWS_CLIENT_SECRET }}
           refresh-token: ${{ secrets.CWS_REFRESH_TOKEN }}
           publish: true
+
+      # The upload action reports only a generic "package was invalid" line and
+      # swallows the Chrome Web Store's detailed itemError. When the upload step
+      # fails, re-fetch the item's DRAFT status — it carries the itemError array
+      # from the last upload attempt — and print it so the exact reason is visible.
+      - name: Surface Chrome Web Store itemError on failure
+        if: failure() && steps.cws_upload.outcome == 'failure'
+        env:
+          EXT_ID: ${{ secrets.CWS_EXTENSION_ID }}
+          CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+        run: |
+          set -uo pipefail
+
+          resp=$(curl -sS -X POST https://oauth2.googleapis.com/token \
+            -d "client_id=${CLIENT_ID}" \
+            -d "client_secret=${CLIENT_SECRET}" \
+            -d "refresh_token=${REFRESH_TOKEN}" \
+            -d "grant_type=refresh_token")
+          token=$(echo "$resp" | jq -r '.access_token // empty')
+          if [ -z "$token" ]; then
+            echo "::warning::Could not exchange token to fetch itemError: $(echo "$resp" | jq -r '.error_description // .error // "unknown"')"
+            exit 0
+          fi
+          echo "::add-mask::$token"
+
+          item=$(curl -sS -H "Authorization: Bearer ${token}" \
+            "https://www.googleapis.com/chromewebstore/v1.1/items/${EXT_ID}?projection=DRAFT")
+
+          state=$(echo "$item" | jq -r '.uploadState // "unknown"')
+          echo "uploadState=${state}"
+
+          # itemError is an array of {error_code, error_detail}. Print each on its
+          # own ::error:: line so the exact rejection reason appears in the summary.
+          if echo "$item" | jq -e '.itemError | type == "array" and length > 0' >/dev/null 2>&1; then
+            echo "Chrome Web Store reported the following item errors:"
+            echo "$item" | jq -r '.itemError[] | "::error::CWS \(.error_code // "ERROR"): \(.error_detail // "no detail")"'
+          else
+            echo "::warning::The store returned no itemError detail. Full item resource (public key removed):"
+            echo "$item" | jq 'del(.publicKey)' || echo "$item"
+          fi
 
       # The upload action exits 0 even when the store ignores the publish call,
       # so confirm independently that the store now reports this version.
