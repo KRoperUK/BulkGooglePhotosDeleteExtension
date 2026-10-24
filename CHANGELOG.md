@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.1](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/compare/v1.5.0...v1.5.1) (2026-10-24)
+
+
+### Bug Fixes
+
+* use English extension name in all locales to pass CWS review ([47ad654](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/47ad6548a827ab928893ce11dc6271a4088ff339))
+* use English extension name in all locales to pass CWS review ([03ae1c1](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/03ae1c1f3c531333794d390bb2399afd2e0c7186)), closes [#44](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/issues/44)
+
 ## [1.5.0](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/compare/v1.4.0...v1.5.0) (2026-10-23)
 
 
