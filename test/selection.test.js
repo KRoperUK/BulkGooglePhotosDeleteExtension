@@ -216,6 +216,21 @@ test('pause parks the run with nothing selected; resume finishes it (guards #46)
   assert.ok(selected <= 10, `selected ${selected} exceeds batch size 10`);
 });
 
+test('dry run reports a rolling rate and an ETA against the cap (guards #47)', async () => {
+  const { sent, dispatch } = loadExtension({ gridSize: 200 });
+
+  await dispatch({ type: 'bdgp:start', options: { batchSize: 10, maxTotal: 100, delay: 1, dryRun: true } });
+  assert.equal(await waitForFinish(sent), true, 'run did not finish');
+
+  const rated = sent.filter((m) => m.progress && typeof m.progress.rate === 'number');
+  assert.ok(rated.length > 0, 'no progress update carried a rate');
+  for (const m of rated) assert.ok(m.progress.rate > 0, `rate not positive: ${m.progress.rate}`);
+
+  const withEta = sent.filter((m) => m.progress && typeof m.progress.eta === 'string');
+  assert.ok(withEta.length > 0, 'no progress update carried an ETA while maxTotal was set');
+  assert.match(withEta[0].progress.eta, /remaining/);
+});
+
 test('refuses to run on the Bin page', async () => {
   const { dispatch } = loadExtension({ gridSize: 10, url: 'https://photos.google.com/trash' });
 

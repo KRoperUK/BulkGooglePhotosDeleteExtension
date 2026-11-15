@@ -10,6 +10,8 @@ const ui = {
   bar: el('bar'),
   batch: el('batch'),
   elapsed: el('elapsed'),
+  rate: el('rate'),
+  eta: el('eta'),
   batchSize: el('batchSize'),
   maxTotal: el('maxTotal'),
   delay: el('delay'),
@@ -50,6 +52,10 @@ function setRunning(value) {
   ui.stop.disabled = !value;
   if (!value) ui.pause.textContent = 'Pause';
   if (value) {
+    ui.rate.textContent = '';
+    ui.eta.textContent = '';
+  }
+  if (value) {
     startedAt = Date.now();
     if (timer) clearInterval(timer);
     timer = setInterval(() => {
@@ -66,6 +72,8 @@ function renderProgress(p) {
   if (p.phase !== undefined && p.phase !== null) ui.phase.textContent = p.phase;
   if (p.deleted !== undefined && p.deleted !== null) ui.count.textContent = Number(p.deleted).toLocaleString();
   if (p.batch !== undefined && p.batch !== null) ui.batch.textContent = `Batch ${p.batch}`;
+  if (p.rate !== undefined && p.rate !== null) ui.rate.textContent = `~${Number(p.rate).toLocaleString()}/min`;
+  if (p.eta !== undefined && p.eta !== null) ui.eta.textContent = p.eta;
   if (p.paused === true) {
     setConnection('Paused — bring the Photos tab to the foreground', 'warn');
   } else if (p.paused === false && running) {

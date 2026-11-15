@@ -307,7 +307,8 @@
     paused: false,
     deleted: 0,
     batches: 0,
-    empty: false
+    empty: false,
+    history: []
   };
 
   // Park the run at a batch boundary while paused. The live selection is
@@ -674,6 +675,7 @@
     state.running = true;
     state.stop = false;
     state.deleted = 0;
+    state.history = [];
     state.batches = 0;
     state.empty = false;
 
@@ -721,7 +723,8 @@
           phase: batch ? `Selecting up to ${batch}…` : 'Selecting everything in view…',
           deleted: state.deleted,
           batch: state.batches + 1,
-          percent: opts.maxTotal ? (state.deleted / opts.maxTotal) * 100 : null
+          percent: opts.maxTotal ? (state.deleted / opts.maxTotal) * 100 : null,
+          ...progressStats(remaining)
         });
         let selected = await selectBatch(batch, opts.delay);
 
@@ -756,6 +759,8 @@
           log(`Trimmed to ${selected}.`);
         }
 
+        if (selected > 0) state.history.push({ t: Date.now(), n: selected });
+
         if (opts.dryRun) {
           log(`Dry run: selected ${selected} item(s). Checking the delete path without deleting.`);
 
@@ -770,7 +775,8 @@
           await deselectAll();
           updateModal({
             phase: `Dry run — ${selected} selected, delete control ${deleteBtn ? 'found' : 'MISSING'}`,
-            percent: 100
+            percent: 100,
+            ...progressStats(remaining)
           });
           setStatus(`Dry run complete — delete control ${deleteBtn ? 'found' : 'MISSING'}`);
           break;
@@ -788,7 +794,8 @@
           phase: 'Waiting for the grid to refresh…',
           deleted: state.deleted,
           batch: state.batches,
-          percent: opts.maxTotal ? (state.deleted / opts.maxTotal) * 100 : null
+          percent: opts.maxTotal ? (state.deleted / opts.maxTotal) * 100 : null,
+          ...progressStats(remaining)
         });
         log(`Batch ${state.batches}: deleted ${selected}. Total: ${state.deleted}`);
 
@@ -863,8 +870,38 @@
     emit({ status: text });
   }
 
-  function updateModal({ phase, deleted, batch, percent, paused }) {
-    emit({ progress: { phase, deleted, batch, percent, paused } });
+  // Rolling deletion rate over roughly the last minute (not a cumulative
+  // average, which lags badly after a slow start), plus a remaining-time
+  // estimate when the run is capped. Pure read/derive: never touches the
+  // selection or delete path.
+  function ratePerMinute() {
+    const now = Date.now();
+    const recent = state.history.filter((h) => now - h.t <= 60000);
+    if (!recent.length) return null;
+    const spanMs = Math.max(now - recent[0].t, 1000);
+    const total = recent.reduce((sum, h) => sum + h.n, 0);
+    return total / (spanMs / 60000);
+  }
+
+  function formatEta(remaining, rate) {
+    if (!(rate > 0) || !Number.isFinite(remaining) || remaining <= 0) return null;
+    const mins = remaining / rate;
+    if (mins < 1) return `~${Math.max(1, Math.round(mins * 60))}s remaining`;
+    if (mins < 60) return `~${Math.round(mins)}m remaining`;
+    return `~${Math.floor(mins / 60)}h ${Math.round(mins % 60)}m remaining`;
+  }
+
+  function progressStats(remaining) {
+    const out = {};
+    const rate = ratePerMinute();
+    if (rate !== null) out.rate = Math.round(rate * 10) / 10;
+    const eta = remaining === undefined ? null : formatEta(remaining, rate);
+    if (eta) out.eta = eta;
+    return out;
+  }
+
+  function updateModal({ phase, deleted, batch, percent, paused, rate, eta }) {
+    emit({ progress: { phase, deleted, batch, percent, paused, rate, eta } });
   }
 
   function showModal() {
