@@ -26,7 +26,8 @@ const browserGlobals = {
 
 const extensionGlobals = {
   ...browserGlobals,
-  chrome: 'readonly'
+  chrome: 'readonly',
+  BDGPSettings: 'readonly'
 };
 
 const nodeGlobals = {
@@ -45,7 +46,7 @@ module.exports = [
   js.configs.recommended,
   {
     // Extension runtime scripts.
-    files: ['content.js', 'background.js', 'sidepanel.js'],
+    files: ['content.js', 'background.js', 'settings.js', 'sidepanel.js'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'script',

@@ -78,7 +78,7 @@ overshoot), and the tests are the guard.
 ## House style
 
 - Match the surrounding code: 2-space indent, single quotes, `const`/`let`, no semicolon-free lines, early returns over deep nesting.
-- No new runtime dependencies. The extension must stay dependency-free, make no network requests, and keep `permissions` minimal (`activeTab`, `scripting`, `sidePanel` — no host permissions).
+- No new runtime dependencies. The extension must stay dependency-free, make no network requests, and keep `permissions` minimal (`activeTab`, `scripting`, `sidePanel`, `storage` — no host permissions).
 - Comments explain *why*, not *what*, and only where the logic is non-obvious (e.g. Google's DOM quirks).
 - Selector matching is layered with fallbacks and localized across ~20 languages; when adding a selector, add it to the existing word lists rather than hard-coding English.
 

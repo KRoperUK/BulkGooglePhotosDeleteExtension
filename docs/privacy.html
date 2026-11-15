@@ -55,10 +55,10 @@
   <p>The extension makes no network requests of any kind. It contains no <code>fetch</code>, <code>XMLHttpRequest</code>, <code>WebSocket</code> or <code>sendBeacon</code> calls, no remote script loading, and no remote code execution. All logic ships inside the installed package. There is no backend service, no API, and no analytics endpoint for it to talk to.</p>
 
   <h2>5. Permissions</h2>
-  <p>The extension requests <strong>no host permissions</strong>. It declares three warning-free permissions: <code>activeTab</code>, which grants access to the current tab only when you click the toolbar button; <code>sidePanel</code>, which lets that button open the extension's own panel; and <code>scripting</code>, which lets it inject its own bundled script into that tab. It cannot read or modify any other website, and the grant ends when you navigate away.</p>
+  <p>The extension requests <strong>no host permissions</strong>. It declares four warning-free permissions: <code>activeTab</code>, which grants access to the current tab only when you click the toolbar button; <code>sidePanel</code>, which lets that button open the extension's own panel; <code>scripting</code>, which lets it inject its own bundled script into that tab; and <code>storage</code>, which lets it remember your panel settings on your own device. It cannot read or modify any other website, and the tab grant ends when you navigate away.</p>
 
   <h2>6. Storage</h2>
-  <p>No data is stored. The extension does not use <code>localStorage</code>, <code>IndexedDB</code>, cookies, or any browser storage API. Settings you type into the panel exist only until the page is closed.</p>
+  <p>Your panel settings (batch size, delay, caps, confirm toggle) are stored locally on your device with <code>chrome.storage.local</code> so they survive across sessions. Nothing is transmitted anywhere: there is no account, no sync, and no server. The dry-run toggle is never stored and always starts on, so restored settings can never silently arm a destructive run.</p>
 
   <h2>7. Third parties</h2>
   <p>There are no third parties. Nothing is sold, rented, shared, or transferred to anyone, and no third-party SDKs, trackers, or advertising services are included.</p>
