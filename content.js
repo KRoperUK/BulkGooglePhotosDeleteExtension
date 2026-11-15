@@ -101,24 +101,43 @@
 
   // ---------- DOM discovery ----------
 
+  // Last-matched lookup paths, surfaced by diagnose() so a bug report can
+  // carry a strategy fingerprint. Local only: no network, no storage.
+  const diag = {
+    tiles: 'not run yet',
+    deleteBtn: 'not run yet',
+    selectAll: 'not run yet',
+    count: 'not run yet'
+  };
+
   function findTileCheckboxes() {
     const strategies = [
-      () => [...document.querySelectorAll('[role="checkbox"][aria-checked]')],
-      () => [...document.querySelectorAll('a[href*="/photo/"]')]
-        .map((a) => a.closest('[role="checkbox"]') || a.querySelector('[role="checkbox"]')),
-      () => [...document.querySelectorAll('[data-latest-bg]')]
-        .map((el) => el.closest('[role="checkbox"]') || el.querySelector('[role="checkbox"]'))
+      { name: 'role=checkbox', run: () => [...document.querySelectorAll('[role="checkbox"][aria-checked]')] },
+      {
+        name: 'photo-link ancestor',
+        run: () => [...document.querySelectorAll('a[href*="/photo/"]')]
+          .map((a) => a.closest('[role="checkbox"]') || a.querySelector('[role="checkbox"]'))
+      },
+      {
+        name: 'data-latest-bg ancestor',
+        run: () => [...document.querySelectorAll('[data-latest-bg]')]
+          .map((el) => el.closest('[role="checkbox"]') || el.querySelector('[role="checkbox"]'))
+      }
     ];
 
-    for (const strategy of strategies) {
+    for (let i = 0; i < strategies.length; i++) {
       let found = [];
       try {
-        found = strategy().filter((el) => el && el.isConnected && visible(el) && !inChrome(el));
+        found = strategies[i].run().filter((el) => el && el.isConnected && visible(el) && !inChrome(el));
       } catch (e) {
         continue;
       }
-      if (found.length) return dedupe(found);
+      if (found.length) {
+        diag.tiles = `strategy ${i + 1}/${strategies.length} (${strategies[i].name})`;
+        return dedupe(found);
+      }
     }
+    diag.tiles = 'none matched';
     return [];
   }
 
@@ -166,17 +185,24 @@
     for (const region of document.querySelectorAll('[role="toolbar"], [role="banner"], header')) {
       if (!visible(region)) continue;
       const n = countInText(region, 400);
-      if (n !== null) return n;
+      if (n !== null) {
+        diag.count = 'toolbar/banner/header region';
+        return n;
+      }
     }
 
     // Fall back to a bounded whole-document walk for layouts where the counter
     // is not inside a recognised toolbar region.
     const docCount = countInText(document.body, 6000);
-    if (docCount !== null) return docCount;
+    if (docCount !== null) {
+      diag.count = 'whole-document fallback';
+      return docCount;
+    }
 
     // Last resort: count checked tiles. This under-reports when the selection
     // spans off-screen tiles the virtualised grid has not rendered, so it is
     // only reached when no textual counter was found at all.
+    diag.count = 'checked-tiles fallback';
     return findTileCheckboxes().filter((el) => el.getAttribute('aria-checked') === 'true').length;
   }
 
@@ -195,10 +221,14 @@
       return text && looksLikeDelete(text) && !text.includes('undo');
     });
 
-    if (matches.length) return matches[0];
+    if (matches.length) {
+      diag.deleteBtn = 'primary label match';
+      return matches[0];
+    }
 
     // Icon-only buttons often carry the label on a child or the tooltip on a parent.
     const withChildLabel = candidates.filter((el) => looksLikeDelete(label(el)));
+    diag.deleteBtn = withChildLabel.length ? 'child-label fallback' : 'not found';
     return withChildLabel[0] || null;
   }
 
@@ -427,14 +457,20 @@
       await sleep(700);
       const n = selectionCount();
       log(`Select-all control clicked → ${n} selected`);
-      if (n > 1) return n;
+      if (n > 1) {
+        diag.selectAll = 'toolbar control';
+        return n;
+      }
     }
 
     // Path 2 — the overflow menu item.
     if (await selectAllViaMenu()) {
       const n = selectionCount();
       log(`Menu select-all → ${n} selected`);
-      if (n > 1) return n;
+      if (n > 1) {
+        diag.selectAll = 'overflow menu';
+        return n;
+      }
     }
 
     // Path 3 — shift-click the last rendered tile to extend the range.
@@ -449,7 +485,10 @@
       await sleep(500);
       const n = selectionCount();
       log(`Shift-range → ${n} selected`);
-      if (n > 1) return n;
+      if (n > 1) {
+        diag.selectAll = 'shift-range';
+        return n;
+      }
     }
 
     // Path 4 — keyboard shortcut.
@@ -457,6 +496,7 @@
     await sleep(500);
     const n = selectionCount();
     log(`Keyboard select-all → ${n} selected`);
+    diag.selectAll = n > 1 ? 'keyboard shortcut' : 'none matched';
     return n;
   }
 
@@ -990,6 +1030,10 @@
     const deleteBtn = findDeleteButton();
     const buttons = [...document.querySelectorAll('button, [role="button"]')].filter(visible).slice(0, 30);
     const container = tiles.length ? scrollContainer(tiles[0]) : null;
+    if (diag.selectAll === 'not run yet') {
+      diag.selectAll = control ? 'control lookup: found' : 'control lookup: not found';
+    }
+    const selected = selectionCount();
 
     return [
       `Tiles in DOM: ${tiles.length}`,
@@ -999,7 +1043,11 @@
       `Delete control: ${deleteBtn ? label(deleteBtn).slice(0, 40) : 'not found'}`,
       `Visible buttons: ${dedupe(buttons.map((b) => label(b).slice(0, 28) || '(unlabelled)')).slice(0, 18).join(' | ')}`,
       `Scroll container: ${container ? `${container.tagName} h=${container.clientHeight} sh=${container.scrollHeight}` : 'none'}`,
-      `Selected count: ${selectionCount()}`
+      `Tile lookup: ${diag.tiles}`,
+      `Delete lookup: ${diag.deleteBtn}`,
+      `Select-all lookup: ${diag.selectAll}`,
+      `Count source: ${diag.count}`,
+      `Selected count: ${selected}`
     ];
   }
 

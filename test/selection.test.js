@@ -264,6 +264,18 @@ test('archive-only refuses to run outside the Archive view (guards #49)', async 
   assert.match(res.error, /Archive/);
 });
 
+test('diagnose reports which selector fallback matched (guards #51)', async () => {
+  const { dispatch } = loadExtension({ gridSize: 10 });
+
+  const res = await dispatch({ type: 'bdgp:diagnose' });
+  assert.equal(res.ok, true);
+  const find = (prefix) => res.report.find((l) => l.startsWith(prefix));
+  assert.match(find('Tile lookup:'), /strategy 1\/3 \(role=checkbox\)/);
+  assert.match(find('Delete lookup:'), /primary label match/);
+  assert.ok(find('Select-all lookup:'), 'missing select-all lookup line');
+  assert.match(find('Count source:'), /toolbar/);
+});
+
 test('refuses to run on the Bin page', async () => {
   const { dispatch } = loadExtension({ gridSize: 10, url: 'https://photos.google.com/trash' });
 
