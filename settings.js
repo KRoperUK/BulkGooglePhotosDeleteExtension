@@ -14,7 +14,9 @@
     batchSize: 50,
     maxTotal: 0,
     delay: 5,
-    confirm: true
+    confirm: true,
+    skipFavourites: false,
+    archiveOnly: false
   };
 
   const toInt = (value, fallback) => {
@@ -33,7 +35,9 @@
       batchSize: Math.max(0, batchSize),
       maxTotal: Math.max(0, maxTotal),
       delay: Math.max(1, delay),
-      confirm: typeof source.confirm === 'boolean' ? source.confirm : DEFAULTS.confirm
+      confirm: typeof source.confirm === 'boolean' ? source.confirm : DEFAULTS.confirm,
+      skipFavourites: typeof source.skipFavourites === 'boolean' ? source.skipFavourites : DEFAULTS.skipFavourites,
+      archiveOnly: typeof source.archiveOnly === 'boolean' ? source.archiveOnly : DEFAULTS.archiveOnly
     };
   };
 

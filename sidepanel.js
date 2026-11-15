@@ -17,6 +17,8 @@ const ui = {
   delay: el('delay'),
   dryRun: el('dryRun'),
   confirm: el('confirm'),
+  skipFavourites: el('skipFavourites'),
+  archiveOnly: el('archiveOnly'),
   start: el('start'),
   pause: el('pause'),
   stop: el('stop'),
@@ -169,7 +171,9 @@ function options() {
     batchSize: Math.max(0, parseInt(ui.batchSize.value, 10) || 0),
     maxTotal: Math.max(0, parseInt(ui.maxTotal.value, 10) || 0),
     delay: Math.max(1, parseInt(ui.delay.value, 10) || 5),
-    dryRun: ui.dryRun.checked
+    dryRun: ui.dryRun.checked,
+    skipFavourites: ui.skipFavourites.checked,
+    archiveOnly: ui.archiveOnly.checked
   };
 }
 
@@ -271,16 +275,20 @@ async function restoreSettings() {
   ui.maxTotal.value = String(saved.maxTotal);
   ui.delay.value = String(saved.delay);
   ui.confirm.checked = saved.confirm;
+  ui.skipFavourites.checked = saved.skipFavourites;
+  ui.archiveOnly.checked = saved.archiveOnly;
   ui.dryRun.checked = true;
 }
 
-for (const id of ['batchSize', 'maxTotal', 'delay', 'confirm']) {
+for (const id of ['batchSize', 'maxTotal', 'delay', 'confirm', 'skipFavourites', 'archiveOnly']) {
   ui[id].addEventListener('change', () => {
     BDGPSettings.save(chrome.storage && chrome.storage.local, {
       batchSize: ui.batchSize.value,
       maxTotal: ui.maxTotal.value,
       delay: ui.delay.value,
-      confirm: ui.confirm.checked
+      confirm: ui.confirm.checked,
+      skipFavourites: ui.skipFavourites.checked,
+      archiveOnly: ui.archiveOnly.checked
     });
   });
 }

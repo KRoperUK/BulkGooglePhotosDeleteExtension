@@ -210,6 +210,35 @@
 
   const DESELECT_RE = /deselect|unselect|abwählen|auswahl aufheben|désélectionner|desseleccionar|deseleziona|deselecteren|avmarkera|fjordel|odznacz|снять выделение|取消选择|取消選取|選択を解除|선택 해제|إلغاء تحديد|בטל בחירה/i;
 
+  // Starred/favourited markers across the supported locales. Matched as
+  // substrings like the other word lists; deliberately excludes bare
+  // "star" (a substring of "start") to avoid false positives.
+  const FAVOURITE_WORDS = [
+    'favorite', 'favourite', 'favorited', 'favourited',
+    'favori', 'favoris', 'favorito', 'favorita', 'preferito', 'preferita',
+    'favoriet', 'favorit', 'favoritt', 'suosikki',
+    'ulubion', 'obliben',
+    'избранное', 'обране',
+    'starred', 'stjärnmärkt',
+    '收藏', '最愛', '最爱', 'お気に入り', '즐겨찾기',
+    'مفضلة', 'מועדפים', 'αγαπημένο', 'αγαπημένα', 'yıldızlı'
+  ];
+
+  function isFavourite(tile) {
+    if (!tile) return false;
+    if (FAVOURITE_WORDS.some((w) => label(tile).includes(w))) return true;
+    // A star toggle whose pressed state marks the tile as favourited.
+    return [...tile.querySelectorAll('[aria-pressed="true"]')]
+      .some((el) => FAVOURITE_WORDS.some((w) => label(el).includes(w)));
+  }
+
+  // The Archive section lives under /archive. Assumption: fail closed — an
+  // archive-only run anywhere else refuses to start rather than selecting
+  // the main library by mistake.
+  function isArchiveView() {
+    return window.location.pathname.includes('/archive');
+  }
+
   async function selectOne(el) {
     if (!el || !el.isConnected) return false;
 
@@ -370,7 +399,19 @@
     return false;
   }
 
-  async function selectAllInView() {
+  // Click checked favourited tiles back off. Exclusions only narrow the
+  // selection, so the batch-size ceiling still holds.
+  async function deselectExcluded() {
+    const checked = findTileCheckboxes()
+      .filter((el) => el.getAttribute('aria-checked') === 'true' && isFavourite(el));
+    for (const tile of checked) {
+      if (state.stop || !tile.isConnected || tile.getAttribute('aria-checked') !== 'true') continue;
+      tile.click();
+      await sleep(40);
+    }
+  }
+
+  async function selectAllInViewUnfiltered() {
     // Path 1 — an explicit "Select all" checkbox/button in the selection toolbar.
     let control = findSelectAllControl();
     if (!control) {
@@ -416,6 +457,17 @@
     await sleep(500);
     const n = selectionCount();
     log(`Keyboard select-all → ${n} selected`);
+    return n;
+  }
+
+  async function selectAllInView(opts) {
+    const n = await selectAllInViewUnfiltered();
+    if (n > 1 && opts && opts.skipFavourites) {
+      await deselectExcluded();
+      const kept = selectionCount();
+      log(`Skipped favourites — ${kept} selected after exclusions`);
+      return kept;
+    }
     return n;
   }
 
@@ -499,8 +551,15 @@
     return false;
   }
 
-  async function selectBatch(batchSize, delay) {
-    if (batchSize === 0) return selectAllInView();
+  async function selectBatch(batchSize, opts) {
+    if (batchSize === 0) return selectAllInView(opts);
+
+    const delay = Math.max(1, Number(opts && opts.delay) || 5);
+    const skipFav = !!(opts && opts.skipFavourites);
+    const visibleTiles = () => {
+      const tiles = findTileCheckboxes();
+      return skipFav ? tiles.filter((el) => !isFavourite(el)) : tiles;
+    };
 
     let selected = 0;
     let attempted = 0;
@@ -510,14 +569,16 @@
     // Cap on clicks performed, not on clicks that verified. The snapshot can
     // hold 70-100 tiles, so trusting a lagging verified count overshoots badly.
     while (!state.stop && attempted < batchSize) {
-      const tiles = findTileCheckboxes();
+      const tiles = visibleTiles();
       if (!container && tiles.length) container = scrollContainer(tiles[0]);
 
       // Nothing rendered: the grid is almost certainly still refreshing after
       // a delete. Give it real time before deciding the library is empty.
+      // Uses the filtered view so an all-excluded window keeps scrolling
+      // instead of spinning on tiles it will never select.
       if (!tiles.length) {
         const refreshed = await waitFor(() => {
-          const t = findTileCheckboxes();
+          const t = visibleTiles();
           return t.length ? t : null;
         }, 25000);
 
@@ -538,7 +599,7 @@
           continue;
         }
         const more = await waitFor(() => {
-          const t = findTileCheckboxes().filter((el) => el.getAttribute('aria-checked') !== 'true');
+          const t = visibleTiles().filter((el) => el.getAttribute('aria-checked') !== 'true');
           return t.length ? t : null;
         }, 8000);
         if (!more) break;
@@ -669,7 +730,9 @@
       batchSize: Math.max(0, Number(opts && opts.batchSize) || 0),
       maxTotal: Math.max(0, Number(opts && opts.maxTotal) || 0),
       delay: Math.max(1, Number(opts && opts.delay) || 5),
-      dryRun: !!(opts && opts.dryRun)
+      dryRun: !!(opts && opts.dryRun),
+      skipFavourites: !!(opts && opts.skipFavourites),
+      archiveOnly: !!(opts && opts.archiveOnly)
     };
 
     state.running = true;
@@ -695,7 +758,14 @@
 
     showModal();
     updateModal({ phase: 'Starting…', deleted: 0, batch: 0, percent: null });
-    log(`Started. batch=${opts.batchSize || 'all'} max=${opts.maxTotal || 'unlimited'} dryRun=${opts.dryRun}`);
+    log(`Started. batch=${opts.batchSize || 'all'} max=${opts.maxTotal || 'unlimited'} dryRun=${opts.dryRun} skipFavourites=${opts.skipFavourites} archiveOnly=${opts.archiveOnly}`);
+
+    if (opts.archiveOnly && !isArchiveView()) {
+      log('Archive-only is on but this is not the Archive view — refusing to run so the main library is never selected by mistake.');
+      setStatus('Finished — archive-only needs the Archive view');
+      updateModal({ phase: 'Archive-only is on: open the Archive view first', percent: 100 });
+      return;
+    }
 
     if (document.hidden) log('Warning: tab is not visible. Chrome throttles timers in background tabs — keep this tab focused.');
 
@@ -726,7 +796,7 @@
           percent: opts.maxTotal ? (state.deleted / opts.maxTotal) * 100 : null,
           ...progressStats(remaining)
         });
-        let selected = await selectBatch(batch, opts.delay);
+        let selected = await selectBatch(batch, opts);
 
         // A single empty pass after a delete is usually a refreshing grid, not
         // the end of the library. Retry before declaring it empty.
@@ -735,7 +805,7 @@
           await sleep(3000);
           const ready = await waitFor(() => (findTileCheckboxes().length ? true : null), 15000);
           if (!ready) break;
-          selected = await selectBatch(batch, opts.delay);
+          selected = await selectBatch(batch, opts);
         }
 
         if (!selected) {
@@ -955,6 +1025,10 @@
         }
         if (window.location.pathname.startsWith('/trash')) {
           sendResponse({ ok: false, error: 'Refusing to run on the Bin page — deletions there are permanent.' });
+          break;
+        }
+        if (msg.options && msg.options.archiveOnly && !isArchiveView()) {
+          sendResponse({ ok: false, error: 'Archive-only is on but this is not the Archive view. Open Archive first.' });
           break;
         }
         run(msg.options).catch((err) => log(`Error: ${err.message}`));

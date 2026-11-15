@@ -26,8 +26,9 @@ function selectionToolbarHTML() {
 // Build `count` tile checkboxes. Each click toggles aria-checked and updates
 // the toolbar counter, like the real grid. `selectLag` simulates aria-checked
 // lagging the click under load (the condition that used to trip the pointer
-// fallback in selectOne).
-function makeGrid(dom, count, { selectLag = 0 } = {}) {
+// fallback in selectOne). `starred` lists tile indexes whose aria-label marks
+// them favourited.
+function makeGrid(dom, count, { selectLag = 0, starred = [] } = {}) {
   const { document } = dom.window;
   const grid = document.createElement('div');
   grid.id = 'grid';
@@ -48,6 +49,7 @@ function makeGrid(dom, count, { selectLag = 0 } = {}) {
     const tile = document.createElement('div');
     tile.setAttribute('role', 'checkbox');
     tile.setAttribute('aria-checked', 'false');
+    if (starred.includes(i)) tile.setAttribute('aria-label', `Starred photo ${i}`);
     const link = document.createElement('a');
     link.setAttribute('href', `/photo/AB${i}`);
     tile.appendChild(link);
@@ -71,7 +73,7 @@ function makeGrid(dom, count, { selectLag = 0 } = {}) {
 
 // Load content.js into a fresh jsdom window and return a driver around its
 // message API. `url` overrides the default library URL (e.g. the Bin page).
-function loadExtension({ gridSize = 0, selectLag = 0, url = 'https://photos.google.com/' } = {}) {
+function loadExtension({ gridSize = 0, selectLag = 0, starred = [], url = 'https://photos.google.com/' } = {}) {
   const dom = new JSDOM(
     `<!doctype html><html><body>${selectionToolbarHTML()}</body></html>`,
     { url, pretendToBeVisual: true, runScripts: 'outside-only' }
@@ -95,7 +97,7 @@ function loadExtension({ gridSize = 0, selectLag = 0, url = 'https://photos.goog
     }
   };
 
-  if (gridSize) makeGrid(dom, gridSize, { selectLag });
+  if (gridSize) makeGrid(dom, gridSize, { selectLag, starred });
 
   // Execute the content script in the jsdom window context.
   window.eval(CONTENT_JS);
@@ -229,6 +231,37 @@ test('dry run reports a rolling rate and an ETA against the cap (guards #47)', a
   const withEta = sent.filter((m) => m.progress && typeof m.progress.eta === 'string');
   assert.ok(withEta.length > 0, 'no progress update carried an ETA while maxTotal was set');
   assert.match(withEta[0].progress.eta, /remaining/);
+});
+
+test('skip-favourites leaves starred tiles unselected within the ceiling (guards #49)', async () => {
+  const starred = [0, 3, 7, 11, 19];
+  const { window, sent, dispatch } = loadExtension({ gridSize: 60, starred });
+
+  const res = await dispatch({ type: 'bdgp:start', options: { batchSize: 50, delay: 1, dryRun: true, skipFavourites: true } });
+  assert.equal(res.ok, true);
+  assert.equal(await waitForFinish(sent), true, 'run did not finish');
+
+  const tiles = [...window.document.querySelectorAll('[role="checkbox"]')];
+  for (const i of starred) {
+    assert.equal(tiles[i].getAttribute('aria-checked'), 'false', `starred tile ${i} was selected`);
+  }
+
+  const phases = sent
+    .filter((m) => m.progress && typeof m.progress.phase === 'string')
+    .map((m) => m.progress.phase);
+  const dryPhase = phases.reverse().find((p) => /Dry run — \d+ selected/.test(p));
+  assert.ok(dryPhase, 'expected a dry-run summary phase');
+  const selected = Number(dryPhase.match(/Dry run — (\d+) selected/)[1]);
+  assert.ok(selected <= 50, `selected ${selected} exceeds batch size 50`);
+  assert.ok(selected >= 45, `selected ${selected} is implausibly low for 55 unstarred tiles`);
+});
+
+test('archive-only refuses to run outside the Archive view (guards #49)', async () => {
+  const { dispatch } = loadExtension({ gridSize: 10 });
+
+  const res = await dispatch({ type: 'bdgp:start', options: { batchSize: 10, archiveOnly: true, dryRun: true } });
+  assert.equal(res.ok, false);
+  assert.match(res.error, /Archive/);
 });
 
 test('refuses to run on the Bin page', async () => {
