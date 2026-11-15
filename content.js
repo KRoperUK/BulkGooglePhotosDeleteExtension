@@ -367,7 +367,8 @@
     deleted: 0,
     batches: 0,
     empty: false,
-    history: []
+    history: [],
+    settleHistory: []
   };
 
   // Park the run at a batch boundary while paused. The live selection is
@@ -526,6 +527,24 @@
     const before = container.scrollTop;
     container.scrollBy({ top: Math.max(300, Math.round(container.clientHeight * 0.8)), behavior: 'auto' });
     return container.scrollTop !== before;
+  }
+
+  // Adaptive pacing for the inter-batch pause. The manual delay stays the
+  // anchor for the ceiling (never below 2s), the floor keeps short runs
+  // from spinning, and the pause tracks half the recent measured refresh
+  // durations so a loaded host automatically backs off. Pure: given
+  // recorded timings, compute the next delay — unit-tested, no DOM.
+  const ADAPTIVE_FLOOR_MS = 500;
+  const ADAPTIVE_HISTORY = 5;
+
+  function adaptivePauseMs(recentMs, manualDelayMs) {
+    const ceiling = Math.max(2000, Math.max(1, Number(manualDelayMs) || 5));
+    const samples = Array.isArray(recentMs)
+      ? recentMs.filter((n) => Number.isFinite(n) && n >= 0).slice(-ADAPTIVE_HISTORY)
+      : [];
+    if (!samples.length) return Math.min(800, ceiling);
+    const avg = samples.reduce((sum, n) => sum + n, 0) / samples.length;
+    return Math.max(ADAPTIVE_FLOOR_MS, Math.min(ceiling, Math.ceil(avg / 2)));
   }
 
   async function settleGrid(timeout = 15000) {
@@ -779,6 +798,7 @@
     state.stop = false;
     state.deleted = 0;
     state.history = [];
+    state.settleHistory = [];
     state.batches = 0;
     state.empty = false;
 
@@ -909,11 +929,16 @@
         });
         log(`Batch ${state.batches}: deleted ${selected}. Total: ${state.deleted}`);
 
-        await sleep(800);
+        const pauseMs = adaptivePauseMs(state.settleHistory, opts.delay);
+        if (state.settleHistory.length) log(`Adaptive pause: ${pauseMs}ms after recent grid refreshes.`);
+        await sleep(pauseMs);
 
         // Wait on the photos themselves, not on a tile count: a stale grid still
         // has tiles, and that is what let the next pass run too early.
+        const refreshStart = Date.now();
         const changed = await waitForGridChange(before, 30000);
+        state.settleHistory.push(Date.now() - refreshStart);
+        if (state.settleHistory.length > ADAPTIVE_HISTORY) state.settleHistory.shift();
 
         if (libraryIsEmpty()) {
           state.empty = true;
@@ -1122,4 +1147,7 @@
   } else {
     emit({ ready: true });
   }
+
+  // Test seam for the jsdom suite: pure helpers with no extension surface.
+  window.__bdgpTest = { adaptivePauseMs };
 })();

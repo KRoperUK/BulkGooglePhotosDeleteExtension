@@ -276,6 +276,26 @@ test('diagnose reports which selector fallback matched (guards #51)', async () =
   assert.match(find('Count source:'), /toolbar/);
 });
 
+test('adaptive pause tracks measured refreshes within manual bounds (guards #52)', () => {
+  const { window } = loadExtension();
+  const { adaptivePauseMs } = window.__bdgpTest;
+
+  // No history yet: the previous fixed 800ms pause. A small manual
+  // delay never lowers the default; it only raises the ceiling above 2s.
+  assert.equal(adaptivePauseMs([], 5), 800);
+  assert.equal(adaptivePauseMs([], 100), 800);
+
+  // Fast grids settle at the floor; slow grids back off toward the ceiling.
+  assert.equal(adaptivePauseMs([800, 1000], 5), 500);
+  assert.equal(adaptivePauseMs([6000, 8000], 5), 2000);
+
+  // The manual delay still bounds the adaptation from above.
+  assert.equal(adaptivePauseMs([6000, 8000], 10000), 3500);
+
+  // Bad input never escapes the bounds.
+  assert.equal(adaptivePauseMs([NaN, -5], 5), 800);
+});
+
 test('refuses to run on the Bin page', async () => {
   const { dispatch } = loadExtension({ gridSize: 10, url: 'https://photos.google.com/trash' });
 
