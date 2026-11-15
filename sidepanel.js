@@ -239,6 +239,28 @@ ui.confirmText.addEventListener('keydown', (e) => {
 ui.stop.addEventListener('click', stop);
 ui.diagnose.addEventListener('click', diagnose);
 
+// Persisted settings (see settings.js). dryRun is never stored or restored:
+// it always starts checked so restored state cannot arm a destructive run.
+async function restoreSettings() {
+  const saved = await BDGPSettings.load(chrome.storage && chrome.storage.local);
+  ui.batchSize.value = String(saved.batchSize);
+  ui.maxTotal.value = String(saved.maxTotal);
+  ui.delay.value = String(saved.delay);
+  ui.confirm.checked = saved.confirm;
+  ui.dryRun.checked = true;
+}
+
+for (const id of ['batchSize', 'maxTotal', 'delay', 'confirm']) {
+  ui[id].addEventListener('change', () => {
+    BDGPSettings.save(chrome.storage && chrome.storage.local, {
+      batchSize: ui.batchSize.value,
+      maxTotal: ui.maxTotal.value,
+      delay: ui.delay.value,
+      confirm: ui.confirm.checked
+    });
+  });
+}
+
 chrome.runtime.onMessage.addListener((msg) => {
   if (!msg || msg.type !== 'bdgp:event') return;
   if (msg.log) addLog(msg.log);
@@ -247,7 +269,7 @@ chrome.runtime.onMessage.addListener((msg) => {
   if (msg.modal === false) setRunning(false);
 });
 
-connect();
+restoreSettings().finally(connect);
 
 // Re-check the active tab, but only re-inject when the ping fails, so the
 // content script is not re-injected every few seconds.

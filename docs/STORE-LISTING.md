@@ -52,7 +52,7 @@ COMMON USES
 PRIVACY
 
 • No network requests. The extension never contacts any server, including ours — there isn't one.
-• No analytics, no telemetry, no local storage, no accounts.
+• No analytics, no telemetry, no accounts. Panel settings are stored locally on your device only, never transmitted.
 • No host permissions. It can only run on photos.google.com, and only after you click the toolbar button.
 • Nothing is collected, sold or transmitted.
 
