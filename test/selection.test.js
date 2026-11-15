@@ -182,6 +182,40 @@ test('diagnose reports the toolbar selection count, not a stray page number', as
   assert.equal(selectedLine, 'Selected count: 3');
 });
 
+test('pause parks the run with nothing selected; resume finishes it (guards #46)', async () => {
+  const { window, sent, dispatch } = loadExtension({ gridSize: 200 });
+
+  const pauseRes = await dispatch({ type: 'bdgp:pause' });
+  assert.equal(pauseRes.ok, true);
+
+  const started = await dispatch({ type: 'bdgp:start', options: { batchSize: 10, delay: 1, dryRun: true } });
+  assert.equal(started.ok, true);
+
+  // Let the run reach the batch boundary. While paused it must not finish.
+  await new Promise((r) => setTimeout(r, 800));
+  const finishedWhilePaused = sent.some((m) => m.status && /Finished|Dry run complete/.test(m.status));
+  assert.equal(finishedWhilePaused, false, 'run finished despite being paused');
+
+  const ping = await dispatch({ type: 'bdgp:ping' });
+  assert.equal(ping.paused, true);
+
+  // The pause boundary trims the live selection to zero.
+  const checkedWhilePaused = [...window.document.querySelectorAll('[role="checkbox"][aria-checked="true"]')].length;
+  assert.equal(checkedWhilePaused, 0, 'paused run left tiles selected');
+
+  const resumeRes = await dispatch({ type: 'bdgp:resume' });
+  assert.equal(resumeRes.ok, true);
+  assert.equal(await waitForFinish(sent), true, 'run did not finish after resume');
+
+  const phases = sent
+    .filter((m) => m.progress && typeof m.progress.phase === 'string')
+    .map((m) => m.progress.phase);
+  const dryPhase = phases.reverse().find((p) => /Dry run — \d+ selected/.test(p));
+  assert.ok(dryPhase, 'expected a dry-run summary phase after resume');
+  const selected = Number(dryPhase.match(/Dry run — (\d+) selected/)[1]);
+  assert.ok(selected <= 10, `selected ${selected} exceeds batch size 10`);
+});
+
 test('refuses to run on the Bin page', async () => {
   const { dispatch } = loadExtension({ gridSize: 10, url: 'https://photos.google.com/trash' });
 

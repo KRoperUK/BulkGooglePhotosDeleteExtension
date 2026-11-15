@@ -304,10 +304,32 @@
   const state = {
     running: false,
     stop: false,
+    paused: false,
     deleted: 0,
     batches: 0,
     empty: false
   };
+
+  // Park the run at a batch boundary while paused. The live selection is
+  // trimmed to zero on entry so a paused-then-closed tab leaves nothing
+  // behind (the "no stray selection" invariant). Resume re-checks the Bin
+  // guard because the user may have navigated while paused.
+  async function waitWhilePaused() {
+    if (!state.paused) return;
+    log('Paused — clearing the selection. Resume to continue from this batch.');
+    setStatus('Paused');
+    updateModal({ phase: 'Paused', paused: true });
+    await deselectAll();
+    while (state.paused && !state.stop) await sleep(250);
+    if (state.stop) return;
+    if (window.location.pathname.startsWith('/trash')) {
+      log('Refusing to resume on the Bin page — deletions there are permanent. Stopping.');
+      state.stop = true;
+      return;
+    }
+    log('Resumed.');
+    updateModal({ phase: 'Resuming…', paused: false });
+  }
 
   function findSelectAllControl() {
     const els = [...document.querySelectorAll('[role="checkbox"], button, [role="button"]')];
@@ -685,6 +707,8 @@
       }
 
       while (!state.stop) {
+        await waitWhilePaused();
+        if (state.stop) break;
         const remaining = opts.maxTotal ? opts.maxTotal - state.deleted : Infinity;
         if (remaining <= 0) {
           log(`Reached limit of ${opts.maxTotal}.`);
@@ -793,6 +817,7 @@
       updateModal({ phase: `Error: ${err.message}`, percent: null });
     } finally {
       state.running = false;
+      state.paused = false;
 
       // An aborted run (Stop, missing Delete button, failed confirmation) can
       // leave a selection behind, and the next run would stack on top of it.
@@ -881,6 +906,7 @@
         sendResponse({
           ok: true,
           running: state.running,
+          paused: state.paused,
           onTrash: window.location.pathname.startsWith('/trash')
         });
         break;
@@ -902,6 +928,22 @@
         state.stop = true;
         updateModal({ phase: 'Stopping…' });
         log('Stop requested.');
+        sendResponse({ ok: true });
+        break;
+
+      case 'bdgp:pause':
+        state.paused = true;
+        log(state.running ? 'Pause requested — parking at the next batch boundary.' : 'Pause armed — the next run starts parked.');
+        sendResponse({ ok: true });
+        break;
+
+      case 'bdgp:resume':
+        if (!state.paused) {
+          sendResponse({ ok: false, error: 'Not paused.' });
+          break;
+        }
+        state.paused = false;
+        log('Resume requested.');
         sendResponse({ ok: true });
         break;
 

@@ -16,6 +16,7 @@ const ui = {
   dryRun: el('dryRun'),
   confirm: el('confirm'),
   start: el('start'),
+  pause: el('pause'),
   stop: el('stop'),
   diagnose: el('diagnose'),
   confirmStrip: el('confirmStrip'),
@@ -45,7 +46,9 @@ function setConnection(text, state) {
 function setRunning(value) {
   running = value;
   ui.start.disabled = value;
+  ui.pause.disabled = !value;
   ui.stop.disabled = !value;
+  if (!value) ui.pause.textContent = 'Pause';
   if (value) {
     startedAt = Date.now();
     if (timer) clearInterval(timer);
@@ -236,7 +239,20 @@ ui.confirmText.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') ui.confirmGo.click();
 });
 
+async function pauseResume() {
+  if (!tabId) return;
+  const wantPause = ui.pause.textContent === 'Pause';
+  try {
+    const res = await chrome.tabs.sendMessage(tabId, { type: wantPause ? 'bdgp:pause' : 'bdgp:resume' });
+    if (res && res.ok) ui.pause.textContent = wantPause ? 'Resume' : 'Pause';
+    else addLog(`Could not ${wantPause ? 'pause' : 'resume'}.`);
+  } catch (e) {
+    addLog(`Could not ${wantPause ? 'pause' : 'resume'}: ${e.message}`);
+  }
+}
+
 ui.stop.addEventListener('click', stop);
+ui.pause.addEventListener('click', pauseResume);
 ui.diagnose.addEventListener('click', diagnose);
 
 // Persisted settings (see settings.js). dryRun is never stored or restored:
