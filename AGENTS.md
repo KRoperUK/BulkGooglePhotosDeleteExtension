@@ -73,7 +73,10 @@ npm ci && npm test               # jsdom tests for the selection logic
 
 When you change selection, batching, or counting logic in `content.js`, add or
 update a test in `test/` — that logic has shipped regressions before (batch
-overshoot), and the tests are the guard.
+overshoot), and the tests are the guard. jsdom is not the live React
+grid, so also run the live-DOM checklist in
+`docs/VERIFY-BATCH-SELECTION.md` before releasing such a change and paste
+the observed counts into the PR.
 
 ## House style
 
