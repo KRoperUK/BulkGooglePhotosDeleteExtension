@@ -101,24 +101,43 @@
 
   // ---------- DOM discovery ----------
 
+  // Last-matched lookup paths, surfaced by diagnose() so a bug report can
+  // carry a strategy fingerprint. Local only: no network, no storage.
+  const diag = {
+    tiles: 'not run yet',
+    deleteBtn: 'not run yet',
+    selectAll: 'not run yet',
+    count: 'not run yet'
+  };
+
   function findTileCheckboxes() {
     const strategies = [
-      () => [...document.querySelectorAll('[role="checkbox"][aria-checked]')],
-      () => [...document.querySelectorAll('a[href*="/photo/"]')]
-        .map((a) => a.closest('[role="checkbox"]') || a.querySelector('[role="checkbox"]')),
-      () => [...document.querySelectorAll('[data-latest-bg]')]
-        .map((el) => el.closest('[role="checkbox"]') || el.querySelector('[role="checkbox"]'))
+      { name: 'role=checkbox', run: () => [...document.querySelectorAll('[role="checkbox"][aria-checked]')] },
+      {
+        name: 'photo-link ancestor',
+        run: () => [...document.querySelectorAll('a[href*="/photo/"]')]
+          .map((a) => a.closest('[role="checkbox"]') || a.querySelector('[role="checkbox"]'))
+      },
+      {
+        name: 'data-latest-bg ancestor',
+        run: () => [...document.querySelectorAll('[data-latest-bg]')]
+          .map((el) => el.closest('[role="checkbox"]') || el.querySelector('[role="checkbox"]'))
+      }
     ];
 
-    for (const strategy of strategies) {
+    for (let i = 0; i < strategies.length; i++) {
       let found = [];
       try {
-        found = strategy().filter((el) => el && el.isConnected && visible(el) && !inChrome(el));
+        found = strategies[i].run().filter((el) => el && el.isConnected && visible(el) && !inChrome(el));
       } catch (e) {
         continue;
       }
-      if (found.length) return dedupe(found);
+      if (found.length) {
+        diag.tiles = `strategy ${i + 1}/${strategies.length} (${strategies[i].name})`;
+        return dedupe(found);
+      }
     }
+    diag.tiles = 'none matched';
     return [];
   }
 
@@ -166,17 +185,24 @@
     for (const region of document.querySelectorAll('[role="toolbar"], [role="banner"], header')) {
       if (!visible(region)) continue;
       const n = countInText(region, 400);
-      if (n !== null) return n;
+      if (n !== null) {
+        diag.count = 'toolbar/banner/header region';
+        return n;
+      }
     }
 
     // Fall back to a bounded whole-document walk for layouts where the counter
     // is not inside a recognised toolbar region.
     const docCount = countInText(document.body, 6000);
-    if (docCount !== null) return docCount;
+    if (docCount !== null) {
+      diag.count = 'whole-document fallback';
+      return docCount;
+    }
 
     // Last resort: count checked tiles. This under-reports when the selection
     // spans off-screen tiles the virtualised grid has not rendered, so it is
     // only reached when no textual counter was found at all.
+    diag.count = 'checked-tiles fallback';
     return findTileCheckboxes().filter((el) => el.getAttribute('aria-checked') === 'true').length;
   }
 
@@ -195,10 +221,14 @@
       return text && looksLikeDelete(text) && !text.includes('undo');
     });
 
-    if (matches.length) return matches[0];
+    if (matches.length) {
+      diag.deleteBtn = 'primary label match';
+      return matches[0];
+    }
 
     // Icon-only buttons often carry the label on a child or the tooltip on a parent.
     const withChildLabel = candidates.filter((el) => looksLikeDelete(label(el)));
+    diag.deleteBtn = withChildLabel.length ? 'child-label fallback' : 'not found';
     return withChildLabel[0] || null;
   }
 
@@ -209,6 +239,35 @@
   }
 
   const DESELECT_RE = /deselect|unselect|abwählen|auswahl aufheben|désélectionner|desseleccionar|deseleziona|deselecteren|avmarkera|fjordel|odznacz|снять выделение|取消选择|取消選取|選択を解除|선택 해제|إلغاء تحديد|בטל בחירה/i;
+
+  // Starred/favourited markers across the supported locales. Matched as
+  // substrings like the other word lists; deliberately excludes bare
+  // "star" (a substring of "start") to avoid false positives.
+  const FAVOURITE_WORDS = [
+    'favorite', 'favourite', 'favorited', 'favourited',
+    'favori', 'favoris', 'favorito', 'favorita', 'preferito', 'preferita',
+    'favoriet', 'favorit', 'favoritt', 'suosikki',
+    'ulubion', 'obliben',
+    'избранное', 'обране',
+    'starred', 'stjärnmärkt',
+    '收藏', '最愛', '最爱', 'お気に入り', '즐겨찾기',
+    'مفضلة', 'מועדפים', 'αγαπημένο', 'αγαπημένα', 'yıldızlı'
+  ];
+
+  function isFavourite(tile) {
+    if (!tile) return false;
+    if (FAVOURITE_WORDS.some((w) => label(tile).includes(w))) return true;
+    // A star toggle whose pressed state marks the tile as favourited.
+    return [...tile.querySelectorAll('[aria-pressed="true"]')]
+      .some((el) => FAVOURITE_WORDS.some((w) => label(el).includes(w)));
+  }
+
+  // The Archive section lives under /archive. Assumption: fail closed — an
+  // archive-only run anywhere else refuses to start rather than selecting
+  // the main library by mistake.
+  function isArchiveView() {
+    return window.location.pathname.includes('/archive');
+  }
 
   async function selectOne(el) {
     if (!el || !el.isConnected) return false;
@@ -304,10 +363,34 @@
   const state = {
     running: false,
     stop: false,
+    paused: false,
     deleted: 0,
     batches: 0,
-    empty: false
+    empty: false,
+    history: [],
+    settleHistory: []
   };
+
+  // Park the run at a batch boundary while paused. The live selection is
+  // trimmed to zero on entry so a paused-then-closed tab leaves nothing
+  // behind (the "no stray selection" invariant). Resume re-checks the Bin
+  // guard because the user may have navigated while paused.
+  async function waitWhilePaused() {
+    if (!state.paused) return;
+    log('Paused — clearing the selection. Resume to continue from this batch.');
+    setStatus('Paused');
+    updateModal({ phase: 'Paused', paused: true });
+    await deselectAll();
+    while (state.paused && !state.stop) await sleep(250);
+    if (state.stop) return;
+    if (window.location.pathname.startsWith('/trash')) {
+      log('Refusing to resume on the Bin page — deletions there are permanent. Stopping.');
+      state.stop = true;
+      return;
+    }
+    log('Resumed.');
+    updateModal({ phase: 'Resuming…', paused: false });
+  }
 
   function findSelectAllControl() {
     const els = [...document.querySelectorAll('[role="checkbox"], button, [role="button"]')];
@@ -347,7 +430,19 @@
     return false;
   }
 
-  async function selectAllInView() {
+  // Click checked favourited tiles back off. Exclusions only narrow the
+  // selection, so the batch-size ceiling still holds.
+  async function deselectExcluded() {
+    const checked = findTileCheckboxes()
+      .filter((el) => el.getAttribute('aria-checked') === 'true' && isFavourite(el));
+    for (const tile of checked) {
+      if (state.stop || !tile.isConnected || tile.getAttribute('aria-checked') !== 'true') continue;
+      tile.click();
+      await sleep(40);
+    }
+  }
+
+  async function selectAllInViewUnfiltered() {
     // Path 1 — an explicit "Select all" checkbox/button in the selection toolbar.
     let control = findSelectAllControl();
     if (!control) {
@@ -363,14 +458,20 @@
       await sleep(700);
       const n = selectionCount();
       log(`Select-all control clicked → ${n} selected`);
-      if (n > 1) return n;
+      if (n > 1) {
+        diag.selectAll = 'toolbar control';
+        return n;
+      }
     }
 
     // Path 2 — the overflow menu item.
     if (await selectAllViaMenu()) {
       const n = selectionCount();
       log(`Menu select-all → ${n} selected`);
-      if (n > 1) return n;
+      if (n > 1) {
+        diag.selectAll = 'overflow menu';
+        return n;
+      }
     }
 
     // Path 3 — shift-click the last rendered tile to extend the range.
@@ -385,7 +486,10 @@
       await sleep(500);
       const n = selectionCount();
       log(`Shift-range → ${n} selected`);
-      if (n > 1) return n;
+      if (n > 1) {
+        diag.selectAll = 'shift-range';
+        return n;
+      }
     }
 
     // Path 4 — keyboard shortcut.
@@ -393,6 +497,18 @@
     await sleep(500);
     const n = selectionCount();
     log(`Keyboard select-all → ${n} selected`);
+    diag.selectAll = n > 1 ? 'keyboard shortcut' : 'none matched';
+    return n;
+  }
+
+  async function selectAllInView(opts) {
+    const n = await selectAllInViewUnfiltered();
+    if (n > 1 && opts && opts.skipFavourites) {
+      await deselectExcluded();
+      const kept = selectionCount();
+      log(`Skipped favourites — ${kept} selected after exclusions`);
+      return kept;
+    }
     return n;
   }
 
@@ -411,6 +527,24 @@
     const before = container.scrollTop;
     container.scrollBy({ top: Math.max(300, Math.round(container.clientHeight * 0.8)), behavior: 'auto' });
     return container.scrollTop !== before;
+  }
+
+  // Adaptive pacing for the inter-batch pause. The manual delay stays the
+  // anchor for the ceiling (never below 2s), the floor keeps short runs
+  // from spinning, and the pause tracks half the recent measured refresh
+  // durations so a loaded host automatically backs off. Pure: given
+  // recorded timings, compute the next delay — unit-tested, no DOM.
+  const ADAPTIVE_FLOOR_MS = 500;
+  const ADAPTIVE_HISTORY = 5;
+
+  function adaptivePauseMs(recentMs, manualDelayMs) {
+    const ceiling = Math.max(2000, Math.max(1, Number(manualDelayMs) || 5));
+    const samples = Array.isArray(recentMs)
+      ? recentMs.filter((n) => Number.isFinite(n) && n >= 0).slice(-ADAPTIVE_HISTORY)
+      : [];
+    if (!samples.length) return Math.min(800, ceiling);
+    const avg = samples.reduce((sum, n) => sum + n, 0) / samples.length;
+    return Math.max(ADAPTIVE_FLOOR_MS, Math.min(ceiling, Math.ceil(avg / 2)));
   }
 
   async function settleGrid(timeout = 15000) {
@@ -476,8 +610,15 @@
     return false;
   }
 
-  async function selectBatch(batchSize, delay) {
-    if (batchSize === 0) return selectAllInView();
+  async function selectBatch(batchSize, opts) {
+    if (batchSize === 0) return selectAllInView(opts);
+
+    const delay = Math.max(1, Number(opts && opts.delay) || 5);
+    const skipFav = !!(opts && opts.skipFavourites);
+    const visibleTiles = () => {
+      const tiles = findTileCheckboxes();
+      return skipFav ? tiles.filter((el) => !isFavourite(el)) : tiles;
+    };
 
     let selected = 0;
     let attempted = 0;
@@ -487,14 +628,16 @@
     // Cap on clicks performed, not on clicks that verified. The snapshot can
     // hold 70-100 tiles, so trusting a lagging verified count overshoots badly.
     while (!state.stop && attempted < batchSize) {
-      const tiles = findTileCheckboxes();
+      const tiles = visibleTiles();
       if (!container && tiles.length) container = scrollContainer(tiles[0]);
 
       // Nothing rendered: the grid is almost certainly still refreshing after
       // a delete. Give it real time before deciding the library is empty.
+      // Uses the filtered view so an all-excluded window keeps scrolling
+      // instead of spinning on tiles it will never select.
       if (!tiles.length) {
         const refreshed = await waitFor(() => {
-          const t = findTileCheckboxes();
+          const t = visibleTiles();
           return t.length ? t : null;
         }, 25000);
 
@@ -515,7 +658,7 @@
           continue;
         }
         const more = await waitFor(() => {
-          const t = findTileCheckboxes().filter((el) => el.getAttribute('aria-checked') !== 'true');
+          const t = visibleTiles().filter((el) => el.getAttribute('aria-checked') !== 'true');
           return t.length ? t : null;
         }, 8000);
         if (!more) break;
@@ -646,12 +789,16 @@
       batchSize: Math.max(0, Number(opts && opts.batchSize) || 0),
       maxTotal: Math.max(0, Number(opts && opts.maxTotal) || 0),
       delay: Math.max(1, Number(opts && opts.delay) || 5),
-      dryRun: !!(opts && opts.dryRun)
+      dryRun: !!(opts && opts.dryRun),
+      skipFavourites: !!(opts && opts.skipFavourites),
+      archiveOnly: !!(opts && opts.archiveOnly)
     };
 
     state.running = true;
     state.stop = false;
     state.deleted = 0;
+    state.history = [];
+    state.settleHistory = [];
     state.batches = 0;
     state.empty = false;
 
@@ -671,7 +818,14 @@
 
     showModal();
     updateModal({ phase: 'Starting…', deleted: 0, batch: 0, percent: null });
-    log(`Started. batch=${opts.batchSize || 'all'} max=${opts.maxTotal || 'unlimited'} dryRun=${opts.dryRun}`);
+    log(`Started. batch=${opts.batchSize || 'all'} max=${opts.maxTotal || 'unlimited'} dryRun=${opts.dryRun} skipFavourites=${opts.skipFavourites} archiveOnly=${opts.archiveOnly}`);
+
+    if (opts.archiveOnly && !isArchiveView()) {
+      log('Archive-only is on but this is not the Archive view — refusing to run so the main library is never selected by mistake.');
+      setStatus('Finished — archive-only needs the Archive view');
+      updateModal({ phase: 'Archive-only is on: open the Archive view first', percent: 100 });
+      return;
+    }
 
     if (document.hidden) log('Warning: tab is not visible. Chrome throttles timers in background tabs — keep this tab focused.');
 
@@ -685,6 +839,8 @@
       }
 
       while (!state.stop) {
+        await waitWhilePaused();
+        if (state.stop) break;
         const remaining = opts.maxTotal ? opts.maxTotal - state.deleted : Infinity;
         if (remaining <= 0) {
           log(`Reached limit of ${opts.maxTotal}.`);
@@ -697,9 +853,10 @@
           phase: batch ? `Selecting up to ${batch}…` : 'Selecting everything in view…',
           deleted: state.deleted,
           batch: state.batches + 1,
-          percent: opts.maxTotal ? (state.deleted / opts.maxTotal) * 100 : null
+          percent: opts.maxTotal ? (state.deleted / opts.maxTotal) * 100 : null,
+          ...progressStats(remaining)
         });
-        let selected = await selectBatch(batch, opts.delay);
+        let selected = await selectBatch(batch, opts);
 
         // A single empty pass after a delete is usually a refreshing grid, not
         // the end of the library. Retry before declaring it empty.
@@ -708,7 +865,7 @@
           await sleep(3000);
           const ready = await waitFor(() => (findTileCheckboxes().length ? true : null), 15000);
           if (!ready) break;
-          selected = await selectBatch(batch, opts.delay);
+          selected = await selectBatch(batch, opts);
         }
 
         if (!selected) {
@@ -732,6 +889,8 @@
           log(`Trimmed to ${selected}.`);
         }
 
+        if (selected > 0) state.history.push({ t: Date.now(), n: selected });
+
         if (opts.dryRun) {
           log(`Dry run: selected ${selected} item(s). Checking the delete path without deleting.`);
 
@@ -746,7 +905,8 @@
           await deselectAll();
           updateModal({
             phase: `Dry run — ${selected} selected, delete control ${deleteBtn ? 'found' : 'MISSING'}`,
-            percent: 100
+            percent: 100,
+            ...progressStats(remaining)
           });
           setStatus(`Dry run complete — delete control ${deleteBtn ? 'found' : 'MISSING'}`);
           break;
@@ -764,15 +924,21 @@
           phase: 'Waiting for the grid to refresh…',
           deleted: state.deleted,
           batch: state.batches,
-          percent: opts.maxTotal ? (state.deleted / opts.maxTotal) * 100 : null
+          percent: opts.maxTotal ? (state.deleted / opts.maxTotal) * 100 : null,
+          ...progressStats(remaining)
         });
         log(`Batch ${state.batches}: deleted ${selected}. Total: ${state.deleted}`);
 
-        await sleep(800);
+        const pauseMs = adaptivePauseMs(state.settleHistory, opts.delay);
+        if (state.settleHistory.length) log(`Adaptive pause: ${pauseMs}ms after recent grid refreshes.`);
+        await sleep(pauseMs);
 
         // Wait on the photos themselves, not on a tile count: a stale grid still
         // has tiles, and that is what let the next pass run too early.
+        const refreshStart = Date.now();
         const changed = await waitForGridChange(before, 30000);
+        state.settleHistory.push(Date.now() - refreshStart);
+        if (state.settleHistory.length > ADAPTIVE_HISTORY) state.settleHistory.shift();
 
         if (libraryIsEmpty()) {
           state.empty = true;
@@ -793,6 +959,7 @@
       updateModal({ phase: `Error: ${err.message}`, percent: null });
     } finally {
       state.running = false;
+      state.paused = false;
 
       // An aborted run (Stop, missing Delete button, failed confirmation) can
       // leave a selection behind, and the next run would stack on top of it.
@@ -838,8 +1005,38 @@
     emit({ status: text });
   }
 
-  function updateModal({ phase, deleted, batch, percent, paused }) {
-    emit({ progress: { phase, deleted, batch, percent, paused } });
+  // Rolling deletion rate over roughly the last minute (not a cumulative
+  // average, which lags badly after a slow start), plus a remaining-time
+  // estimate when the run is capped. Pure read/derive: never touches the
+  // selection or delete path.
+  function ratePerMinute() {
+    const now = Date.now();
+    const recent = state.history.filter((h) => now - h.t <= 60000);
+    if (!recent.length) return null;
+    const spanMs = Math.max(now - recent[0].t, 1000);
+    const total = recent.reduce((sum, h) => sum + h.n, 0);
+    return total / (spanMs / 60000);
+  }
+
+  function formatEta(remaining, rate) {
+    if (!(rate > 0) || !Number.isFinite(remaining) || remaining <= 0) return null;
+    const mins = remaining / rate;
+    if (mins < 1) return `~${Math.max(1, Math.round(mins * 60))}s remaining`;
+    if (mins < 60) return `~${Math.round(mins)}m remaining`;
+    return `~${Math.floor(mins / 60)}h ${Math.round(mins % 60)}m remaining`;
+  }
+
+  function progressStats(remaining) {
+    const out = {};
+    const rate = ratePerMinute();
+    if (rate !== null) out.rate = Math.round(rate * 10) / 10;
+    const eta = remaining === undefined ? null : formatEta(remaining, rate);
+    if (eta) out.eta = eta;
+    return out;
+  }
+
+  function updateModal({ phase, deleted, batch, percent, paused, rate, eta }) {
+    emit({ progress: { phase, deleted, batch, percent, paused, rate, eta } });
   }
 
   function showModal() {
@@ -858,6 +1055,10 @@
     const deleteBtn = findDeleteButton();
     const buttons = [...document.querySelectorAll('button, [role="button"]')].filter(visible).slice(0, 30);
     const container = tiles.length ? scrollContainer(tiles[0]) : null;
+    if (diag.selectAll === 'not run yet') {
+      diag.selectAll = control ? 'control lookup: found' : 'control lookup: not found';
+    }
+    const selected = selectionCount();
 
     return [
       `Tiles in DOM: ${tiles.length}`,
@@ -867,7 +1068,11 @@
       `Delete control: ${deleteBtn ? label(deleteBtn).slice(0, 40) : 'not found'}`,
       `Visible buttons: ${dedupe(buttons.map((b) => label(b).slice(0, 28) || '(unlabelled)')).slice(0, 18).join(' | ')}`,
       `Scroll container: ${container ? `${container.tagName} h=${container.clientHeight} sh=${container.scrollHeight}` : 'none'}`,
-      `Selected count: ${selectionCount()}`
+      `Tile lookup: ${diag.tiles}`,
+      `Delete lookup: ${diag.deleteBtn}`,
+      `Select-all lookup: ${diag.selectAll}`,
+      `Count source: ${diag.count}`,
+      `Selected count: ${selected}`
     ];
   }
 
@@ -881,6 +1086,7 @@
         sendResponse({
           ok: true,
           running: state.running,
+          paused: state.paused,
           onTrash: window.location.pathname.startsWith('/trash')
         });
         break;
@@ -894,6 +1100,10 @@
           sendResponse({ ok: false, error: 'Refusing to run on the Bin page — deletions there are permanent.' });
           break;
         }
+        if (msg.options && msg.options.archiveOnly && !isArchiveView()) {
+          sendResponse({ ok: false, error: 'Archive-only is on but this is not the Archive view. Open Archive first.' });
+          break;
+        }
         run(msg.options).catch((err) => log(`Error: ${err.message}`));
         sendResponse({ ok: true });
         break;
@@ -902,6 +1112,22 @@
         state.stop = true;
         updateModal({ phase: 'Stopping…' });
         log('Stop requested.');
+        sendResponse({ ok: true });
+        break;
+
+      case 'bdgp:pause':
+        state.paused = true;
+        log(state.running ? 'Pause requested — parking at the next batch boundary.' : 'Pause armed — the next run starts parked.');
+        sendResponse({ ok: true });
+        break;
+
+      case 'bdgp:resume':
+        if (!state.paused) {
+          sendResponse({ ok: false, error: 'Not paused.' });
+          break;
+        }
+        state.paused = false;
+        log('Resume requested.');
         sendResponse({ ok: true });
         break;
 
@@ -921,4 +1147,7 @@
   } else {
     emit({ ready: true });
   }
+
+  // Test seam for the jsdom suite: pure helpers with no extension surface.
+  window.__bdgpTest = { adaptivePauseMs };
 })();

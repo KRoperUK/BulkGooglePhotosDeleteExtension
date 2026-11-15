@@ -62,6 +62,7 @@
     <div class="big"><span id="count">0</span><small id="unit">deleted</small></div>
     <div class="bar-wrap"><div class="bar" id="bar"></div></div>
     <div class="meta"><span id="batch">Batch 0</span><span id="elapsed">0s</span></div>
+    <div class="meta"><span id="rate"></span><span id="eta"></span></div>
   </div>
 
   <div class="row">Batch size <input type="number" id="batchSize" value="50" min="0" step="10"></div>
@@ -71,9 +72,12 @@
   <div class="row">Delay (ms) <input type="number" id="delay" value="5" min="1" step="5"></div>
   <label class="check">Dry run (select only) <input type="checkbox" id="dryRun" checked></label>
   <label class="check">Confirm before deleting <input type="checkbox" id="confirm" checked></label>
+  <label class="check">Skip favourites <input type="checkbox" id="skipFavourites"></label>
+  <label class="check">Archive only <input type="checkbox" id="archiveOnly"></label>
 
   <div class="buttons">
     <button id="start">Start</button>
+    <button id="pause" disabled>Pause</button>
     <button id="stop" disabled>Stop</button>
   </div>
   <div class="buttons"><button id="diagnose">Diagnose</button></div>

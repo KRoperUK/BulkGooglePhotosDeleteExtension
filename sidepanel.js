@@ -10,12 +10,17 @@ const ui = {
   bar: el('bar'),
   batch: el('batch'),
   elapsed: el('elapsed'),
+  rate: el('rate'),
+  eta: el('eta'),
   batchSize: el('batchSize'),
   maxTotal: el('maxTotal'),
   delay: el('delay'),
   dryRun: el('dryRun'),
   confirm: el('confirm'),
+  skipFavourites: el('skipFavourites'),
+  archiveOnly: el('archiveOnly'),
   start: el('start'),
+  pause: el('pause'),
   stop: el('stop'),
   diagnose: el('diagnose'),
   confirmStrip: el('confirmStrip'),
@@ -45,7 +50,13 @@ function setConnection(text, state) {
 function setRunning(value) {
   running = value;
   ui.start.disabled = value;
+  ui.pause.disabled = !value;
   ui.stop.disabled = !value;
+  if (!value) ui.pause.textContent = 'Pause';
+  if (value) {
+    ui.rate.textContent = '';
+    ui.eta.textContent = '';
+  }
   if (value) {
     startedAt = Date.now();
     if (timer) clearInterval(timer);
@@ -63,6 +74,8 @@ function renderProgress(p) {
   if (p.phase !== undefined && p.phase !== null) ui.phase.textContent = p.phase;
   if (p.deleted !== undefined && p.deleted !== null) ui.count.textContent = Number(p.deleted).toLocaleString();
   if (p.batch !== undefined && p.batch !== null) ui.batch.textContent = `Batch ${p.batch}`;
+  if (p.rate !== undefined && p.rate !== null) ui.rate.textContent = `~${Number(p.rate).toLocaleString()}/min`;
+  if (p.eta !== undefined && p.eta !== null) ui.eta.textContent = p.eta;
   if (p.paused === true) {
     setConnection('Paused — bring the Photos tab to the foreground', 'warn');
   } else if (p.paused === false && running) {
@@ -158,7 +171,9 @@ function options() {
     batchSize: Math.max(0, parseInt(ui.batchSize.value, 10) || 0),
     maxTotal: Math.max(0, parseInt(ui.maxTotal.value, 10) || 0),
     delay: Math.max(1, parseInt(ui.delay.value, 10) || 5),
-    dryRun: ui.dryRun.checked
+    dryRun: ui.dryRun.checked,
+    skipFavourites: ui.skipFavourites.checked,
+    archiveOnly: ui.archiveOnly.checked
   };
 }
 
@@ -236,7 +251,20 @@ ui.confirmText.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') ui.confirmGo.click();
 });
 
+async function pauseResume() {
+  if (!tabId) return;
+  const wantPause = ui.pause.textContent === 'Pause';
+  try {
+    const res = await chrome.tabs.sendMessage(tabId, { type: wantPause ? 'bdgp:pause' : 'bdgp:resume' });
+    if (res && res.ok) ui.pause.textContent = wantPause ? 'Resume' : 'Pause';
+    else addLog(`Could not ${wantPause ? 'pause' : 'resume'}.`);
+  } catch (e) {
+    addLog(`Could not ${wantPause ? 'pause' : 'resume'}: ${e.message}`);
+  }
+}
+
 ui.stop.addEventListener('click', stop);
+ui.pause.addEventListener('click', pauseResume);
 ui.diagnose.addEventListener('click', diagnose);
 
 // Persisted settings (see settings.js). dryRun is never stored or restored:
@@ -247,16 +275,20 @@ async function restoreSettings() {
   ui.maxTotal.value = String(saved.maxTotal);
   ui.delay.value = String(saved.delay);
   ui.confirm.checked = saved.confirm;
+  ui.skipFavourites.checked = saved.skipFavourites;
+  ui.archiveOnly.checked = saved.archiveOnly;
   ui.dryRun.checked = true;
 }
 
-for (const id of ['batchSize', 'maxTotal', 'delay', 'confirm']) {
+for (const id of ['batchSize', 'maxTotal', 'delay', 'confirm', 'skipFavourites', 'archiveOnly']) {
   ui[id].addEventListener('change', () => {
     BDGPSettings.save(chrome.storage && chrome.storage.local, {
       batchSize: ui.batchSize.value,
       maxTotal: ui.maxTotal.value,
       delay: ui.delay.value,
-      confirm: ui.confirm.checked
+      confirm: ui.confirm.checked,
+      skipFavourites: ui.skipFavourites.checked,
+      archiveOnly: ui.archiveOnly.checked
     });
   });
 }

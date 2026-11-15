@@ -26,8 +26,9 @@ function selectionToolbarHTML() {
 // Build `count` tile checkboxes. Each click toggles aria-checked and updates
 // the toolbar counter, like the real grid. `selectLag` simulates aria-checked
 // lagging the click under load (the condition that used to trip the pointer
-// fallback in selectOne).
-function makeGrid(dom, count, { selectLag = 0 } = {}) {
+// fallback in selectOne). `starred` lists tile indexes whose aria-label marks
+// them favourited.
+function makeGrid(dom, count, { selectLag = 0, starred = [] } = {}) {
   const { document } = dom.window;
   const grid = document.createElement('div');
   grid.id = 'grid';
@@ -48,6 +49,7 @@ function makeGrid(dom, count, { selectLag = 0 } = {}) {
     const tile = document.createElement('div');
     tile.setAttribute('role', 'checkbox');
     tile.setAttribute('aria-checked', 'false');
+    if (starred.includes(i)) tile.setAttribute('aria-label', `Starred photo ${i}`);
     const link = document.createElement('a');
     link.setAttribute('href', `/photo/AB${i}`);
     tile.appendChild(link);
@@ -71,7 +73,7 @@ function makeGrid(dom, count, { selectLag = 0 } = {}) {
 
 // Load content.js into a fresh jsdom window and return a driver around its
 // message API. `url` overrides the default library URL (e.g. the Bin page).
-function loadExtension({ gridSize = 0, selectLag = 0, url = 'https://photos.google.com/' } = {}) {
+function loadExtension({ gridSize = 0, selectLag = 0, starred = [], url = 'https://photos.google.com/' } = {}) {
   const dom = new JSDOM(
     `<!doctype html><html><body>${selectionToolbarHTML()}</body></html>`,
     { url, pretendToBeVisual: true, runScripts: 'outside-only' }
@@ -95,7 +97,7 @@ function loadExtension({ gridSize = 0, selectLag = 0, url = 'https://photos.goog
     }
   };
 
-  if (gridSize) makeGrid(dom, gridSize, { selectLag });
+  if (gridSize) makeGrid(dom, gridSize, { selectLag, starred });
 
   // Execute the content script in the jsdom window context.
   window.eval(CONTENT_JS);
@@ -180,6 +182,118 @@ test('diagnose reports the toolbar selection count, not a stray page number', as
   assert.equal(res.ok, true);
   const selectedLine = res.report.find((l) => l.startsWith('Selected count:'));
   assert.equal(selectedLine, 'Selected count: 3');
+});
+
+test('pause parks the run with nothing selected; resume finishes it (guards #46)', async () => {
+  const { window, sent, dispatch } = loadExtension({ gridSize: 200 });
+
+  const pauseRes = await dispatch({ type: 'bdgp:pause' });
+  assert.equal(pauseRes.ok, true);
+
+  const started = await dispatch({ type: 'bdgp:start', options: { batchSize: 10, delay: 1, dryRun: true } });
+  assert.equal(started.ok, true);
+
+  // Let the run reach the batch boundary. While paused it must not finish.
+  await new Promise((r) => setTimeout(r, 800));
+  const finishedWhilePaused = sent.some((m) => m.status && /Finished|Dry run complete/.test(m.status));
+  assert.equal(finishedWhilePaused, false, 'run finished despite being paused');
+
+  const ping = await dispatch({ type: 'bdgp:ping' });
+  assert.equal(ping.paused, true);
+
+  // The pause boundary trims the live selection to zero.
+  const checkedWhilePaused = [...window.document.querySelectorAll('[role="checkbox"][aria-checked="true"]')].length;
+  assert.equal(checkedWhilePaused, 0, 'paused run left tiles selected');
+
+  const resumeRes = await dispatch({ type: 'bdgp:resume' });
+  assert.equal(resumeRes.ok, true);
+  assert.equal(await waitForFinish(sent), true, 'run did not finish after resume');
+
+  const phases = sent
+    .filter((m) => m.progress && typeof m.progress.phase === 'string')
+    .map((m) => m.progress.phase);
+  const dryPhase = phases.reverse().find((p) => /Dry run — \d+ selected/.test(p));
+  assert.ok(dryPhase, 'expected a dry-run summary phase after resume');
+  const selected = Number(dryPhase.match(/Dry run — (\d+) selected/)[1]);
+  assert.ok(selected <= 10, `selected ${selected} exceeds batch size 10`);
+});
+
+test('dry run reports a rolling rate and an ETA against the cap (guards #47)', async () => {
+  const { sent, dispatch } = loadExtension({ gridSize: 200 });
+
+  await dispatch({ type: 'bdgp:start', options: { batchSize: 10, maxTotal: 100, delay: 1, dryRun: true } });
+  assert.equal(await waitForFinish(sent), true, 'run did not finish');
+
+  const rated = sent.filter((m) => m.progress && typeof m.progress.rate === 'number');
+  assert.ok(rated.length > 0, 'no progress update carried a rate');
+  for (const m of rated) assert.ok(m.progress.rate > 0, `rate not positive: ${m.progress.rate}`);
+
+  const withEta = sent.filter((m) => m.progress && typeof m.progress.eta === 'string');
+  assert.ok(withEta.length > 0, 'no progress update carried an ETA while maxTotal was set');
+  assert.match(withEta[0].progress.eta, /remaining/);
+});
+
+test('skip-favourites leaves starred tiles unselected within the ceiling (guards #49)', async () => {
+  const starred = [0, 3, 7, 11, 19];
+  const { window, sent, dispatch } = loadExtension({ gridSize: 60, starred });
+
+  const res = await dispatch({ type: 'bdgp:start', options: { batchSize: 50, delay: 1, dryRun: true, skipFavourites: true } });
+  assert.equal(res.ok, true);
+  assert.equal(await waitForFinish(sent), true, 'run did not finish');
+
+  const tiles = [...window.document.querySelectorAll('[role="checkbox"]')];
+  for (const i of starred) {
+    assert.equal(tiles[i].getAttribute('aria-checked'), 'false', `starred tile ${i} was selected`);
+  }
+
+  const phases = sent
+    .filter((m) => m.progress && typeof m.progress.phase === 'string')
+    .map((m) => m.progress.phase);
+  const dryPhase = phases.reverse().find((p) => /Dry run — \d+ selected/.test(p));
+  assert.ok(dryPhase, 'expected a dry-run summary phase');
+  const selected = Number(dryPhase.match(/Dry run — (\d+) selected/)[1]);
+  assert.ok(selected <= 50, `selected ${selected} exceeds batch size 50`);
+  assert.ok(selected >= 45, `selected ${selected} is implausibly low for 55 unstarred tiles`);
+});
+
+test('archive-only refuses to run outside the Archive view (guards #49)', async () => {
+  const { dispatch } = loadExtension({ gridSize: 10 });
+
+  const res = await dispatch({ type: 'bdgp:start', options: { batchSize: 10, archiveOnly: true, dryRun: true } });
+  assert.equal(res.ok, false);
+  assert.match(res.error, /Archive/);
+});
+
+test('diagnose reports which selector fallback matched (guards #51)', async () => {
+  const { dispatch } = loadExtension({ gridSize: 10 });
+
+  const res = await dispatch({ type: 'bdgp:diagnose' });
+  assert.equal(res.ok, true);
+  const find = (prefix) => res.report.find((l) => l.startsWith(prefix));
+  assert.match(find('Tile lookup:'), /strategy 1\/3 \(role=checkbox\)/);
+  assert.match(find('Delete lookup:'), /primary label match/);
+  assert.ok(find('Select-all lookup:'), 'missing select-all lookup line');
+  assert.match(find('Count source:'), /toolbar/);
+});
+
+test('adaptive pause tracks measured refreshes within manual bounds (guards #52)', () => {
+  const { window } = loadExtension();
+  const { adaptivePauseMs } = window.__bdgpTest;
+
+  // No history yet: the previous fixed 800ms pause. A small manual
+  // delay never lowers the default; it only raises the ceiling above 2s.
+  assert.equal(adaptivePauseMs([], 5), 800);
+  assert.equal(adaptivePauseMs([], 100), 800);
+
+  // Fast grids settle at the floor; slow grids back off toward the ceiling.
+  assert.equal(adaptivePauseMs([800, 1000], 5), 500);
+  assert.equal(adaptivePauseMs([6000, 8000], 5), 2000);
+
+  // The manual delay still bounds the adaptation from above.
+  assert.equal(adaptivePauseMs([6000, 8000], 10000), 3500);
+
+  // Bad input never escapes the bounds.
+  assert.equal(adaptivePauseMs([NaN, -5], 5), 800);
 });
 
 test('refuses to run on the Bin page', async () => {

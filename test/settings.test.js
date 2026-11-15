@@ -34,7 +34,7 @@ function fakeStorage(initial) {
 
 test('loads defaults when nothing is stored', async () => {
   const S = loadSettingsModule();
-  assert.deepEqual(await S.load(fakeStorage()), { batchSize: 50, maxTotal: 0, delay: 5, confirm: true });
+  assert.deepEqual(await S.load(fakeStorage()), { batchSize: 50, maxTotal: 0, delay: 5, confirm: true, skipFavourites: false, archiveOnly: false });
 });
 
 test('loads defaults when storage is unavailable', async () => {
@@ -46,8 +46,8 @@ test('loads defaults when storage is unavailable', async () => {
 test('round-trips saved settings', async () => {
   const S = loadSettingsModule();
   const storage = fakeStorage();
-  await S.save(storage, { batchSize: 100, maxTotal: 500, delay: 400, confirm: false });
-  assert.deepEqual(await S.load(storage), { batchSize: 100, maxTotal: 500, delay: 400, confirm: false });
+  await S.save(storage, { batchSize: 100, maxTotal: 500, delay: 400, confirm: false, skipFavourites: false, archiveOnly: false });
+  assert.deepEqual(await S.load(storage), { batchSize: 100, maxTotal: 500, delay: 400, confirm: false, skipFavourites: false, archiveOnly: false });
 });
 
 test('partial saves merge with previously stored values', async () => {
@@ -55,7 +55,7 @@ test('partial saves merge with previously stored values', async () => {
   const storage = fakeStorage();
   await S.save(storage, { batchSize: 100 });
   await S.save(storage, { delay: 400 });
-  assert.deepEqual(await S.load(storage), { batchSize: 100, maxTotal: 0, delay: 400, confirm: true });
+  assert.deepEqual(await S.load(storage), { batchSize: 100, maxTotal: 0, delay: 400, confirm: true, skipFavourites: false, archiveOnly: false });
 });
 
 test('never persists dryRun and always restores it as checked-by-default', async () => {
@@ -65,13 +65,13 @@ test('never persists dryRun and always restores it as checked-by-default', async
   await S.save(storage, { batchSize: 100, dryRun: false });
   const loaded = await S.load(storage);
   assert.equal('dryRun' in loaded, false);
-  assert.deepEqual(loaded, { batchSize: 100, maxTotal: 0, delay: 5, confirm: true });
+  assert.deepEqual(loaded, { batchSize: 100, maxTotal: 0, delay: 5, confirm: true, skipFavourites: false, archiveOnly: false });
 });
 
 test('invalid stored values fall back to safe defaults', async () => {
   const S = loadSettingsModule();
   const storage = fakeStorage({ 'bdgp:settings:v1': { batchSize: -5, maxTotal: 'lots', delay: 0, confirm: 'yes' } });
-  assert.deepEqual(await S.load(storage), { batchSize: 0, maxTotal: 0, delay: 1, confirm: true });
+  assert.deepEqual(await S.load(storage), { batchSize: 0, maxTotal: 0, delay: 1, confirm: true, skipFavourites: false, archiveOnly: false });
 });
 
 test('a failing storage read still yields defaults', async () => {
