@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.6.0](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/compare/v1.5.0...v1.6.0) (2026-11-18)
+
+
+### Features
+
+* adapt inter-batch pause to measured grid-settle time ([e630ecc](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/e630ecca91b457e2ed16cbaec369e9b192162332)), closes [#52](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/issues/52)
+* add pause and resume between batches ([595009a](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/595009a8448f417e2f7be3d023be93ced2a4d80e)), closes [#46](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/issues/46)
+* add skip-favourites and archive-only selection filters ([de97799](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/de97799ef85e03800e6526fb695071517ee92637)), closes [#49](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/issues/49)
+* persist side-panel settings across sessions ([0530109](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/053010972cc3a9b57e85a85bbcb0e8a7e139da2b)), closes [#45](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/issues/45)
+* report which selector fallback matched in Diagnose ([d62671e](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/d62671ecc3722462a60cc22de6531ffec9a6ac74)), closes [#51](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/issues/51)
+* show live deletion rate and ETA in the side panel ([36f753d](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/36f753d928791ab58142bf3a394d72e601494a5d)), closes [#47](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/issues/47)
+* tranche-2 batch — pause/resume, rate+ETA, filters, diagnose fingerprint, adaptive pacing ([2789b51](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/2789b519ce8ca3251f509b35b16078b431274da4))
+
+
+### Bug Fixes
+
+* use English extension name in all locales to pass CWS review ([47ad654](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/47ad6548a827ab928893ce11dc6271a4088ff339))
+* use English extension name in all locales to pass CWS review ([03ae1c1](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/commit/03ae1c1f3c531333794d390bb2399afd2e0c7186)), closes [#44](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/issues/44)
+
 ## [1.5.0](https://github.com/KRoperUK/BulkGooglePhotosDeleteExtension/compare/v1.4.0...v1.5.0) (2026-10-23)
 
 
