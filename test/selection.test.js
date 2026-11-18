@@ -303,3 +303,30 @@ test('refuses to run on the Bin page', async () => {
   assert.equal(res.ok, false);
   assert.match(res.error, /Bin/);
 });
+
+test('a live-grid overshoot is trimmed back to the batch size (guards #50)', async () => {
+  const { dom, sent, dispatch } = loadExtension({ gridSize: 200, selectLag: 0 });
+
+  // Simulate the #29 overshoot shape against the live React grid: 70 tiles
+  // already checked for a batch of 50 before the run starts selecting.
+  const tiles = [...dom.window.document.querySelectorAll('#grid [role="checkbox"]')].slice(0, 70);
+  assert.equal(tiles.length, 70);
+  for (const t of tiles) t.click();
+
+  const res = await dispatch({ type: 'bdgp:start', options: { batchSize: 50, delay: 1, dryRun: true } });
+  assert.equal(res.ok, true);
+  assert.equal(await waitForFinish(sent, 20000), true, 'run did not finish');
+
+  // The delete-time clamp must have fired: the surplus is trimmed before
+  // anything approaches the Delete button.
+  const logs = sent.filter((m) => m.log).map((m) => m.log).join('\n');
+  assert.match(logs, /Selection overshot: \d+ selected for a batch of 50\. Trimming the surplus/);
+
+  const phases = sent
+    .filter((m) => m.progress && typeof m.progress.phase === 'string')
+    .map((m) => m.progress.phase);
+  const dryPhase = phases.reverse().find((p) => /Dry run — \d+ selected/.test(p));
+  assert.ok(dryPhase, `expected a dry-run summary phase, got: ${phases.join(' | ')}`);
+  const selected = Number(dryPhase.match(/Dry run — (\d+) selected/)[1]);
+  assert.equal(selected, 50, `expected the clamp to land exactly on the batch size, got ${selected}`);
+});
