@@ -330,3 +330,23 @@ test('a live-grid overshoot is trimmed back to the batch size (guards #50)', asy
   const selected = Number(dryPhase.match(/Dry run — (\d+) selected/)[1]);
   assert.equal(selected, 50, `expected the clamp to land exactly on the batch size, got ${selected}`);
 });
+
+test('an undo-mentioning control is never used as Delete (guards #63)', async () => {
+  const { window, dispatch } = loadExtension({ gridSize: 3 });
+  const { document } = window;
+
+  // Simulate a UI change: the real Delete button is gone, and the only
+  // delete-worded control also mentions undo (the case the old child-label
+  // fallback would have clicked).
+  document.querySelector('[role="toolbar"] button').remove();
+  const undoBtn = document.createElement('button');
+  undoBtn.setAttribute('aria-label', 'Undo delete');
+  undoBtn.textContent = 'Undo delete';
+  document.querySelector('[role="toolbar"]').appendChild(undoBtn);
+
+  const res = await dispatch({ type: 'bdgp:diagnose' });
+  assert.equal(res.ok, true);
+  const find = (prefix) => res.report.find((l) => l.startsWith(prefix));
+  assert.equal(find('Delete control:'), 'Delete control: not found');
+  assert.match(find('Delete lookup:'), /refusing loose fallback/);
+});
