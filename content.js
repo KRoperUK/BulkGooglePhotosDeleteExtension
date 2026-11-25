@@ -226,10 +226,12 @@
       return matches[0];
     }
 
-    // Icon-only buttons often carry the label on a child or the tooltip on a parent.
-    const withChildLabel = candidates.filter((el) => looksLikeDelete(label(el)));
-    diag.deleteBtn = withChildLabel.length ? 'child-label fallback' : 'not found';
-    return withChildLabel[0] || null;
+    // Fail closed: anything the primary match deliberately excluded (notably
+    // controls mentioning "undo") is never clicked as Delete. A Google UI
+    // change that renames the button stops the run instead of deleting through
+    // the wrong control.
+    diag.deleteBtn = 'no primary match — refusing loose fallback';
+    return null;
   }
 
   function dialogConfirmButton(dialog) {
